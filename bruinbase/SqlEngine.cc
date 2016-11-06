@@ -15,6 +15,8 @@
 #include "Bruinbase.h"
 #include "SqlEngine.h"
 
+#include <string>
+
 using namespace std;
 
 // external functions and variables for load file and sql command parsing 
@@ -133,6 +135,32 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
 RC SqlEngine::load(const string& table, const string& loadfile, bool index)
 {
   /* your code here */
+  //input data file
+  //  FILE * fd = fopen(loadfile, 'r');
+  std::ifstream input;
+  std::string input_line;
+  input.open(loadfile.c_str(), std::ifstream::in);
+
+  //output data file
+  // 0 if no error
+  RecordFile * out = new RecordFile(table, 'w');
+
+
+
+  while(std::getline(input, input_line)) {
+          RecordId rid;
+          int key;
+          std::string value;
+          SqlEngine::parseLoadLine(input_line, key, value);
+//          std::cout << key  << std::endl;
+//          std::cout << value << std::endl;
+//          std::cout << out->append(key, value, rid);
+  }
+
+
+
+  input.close();
+  out->close();
 
   return 0;
 }
