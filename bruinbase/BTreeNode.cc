@@ -25,7 +25,7 @@ RC BTLeafNode::write(PageId pid, PageFile& pf)
  * @return the number of keys in the node
  */
 int BTLeafNode::getKeyCount()
-{ return 0; }
+{ return this->numKeys; }
 
 /*
  * Insert a (key, rid) pair to the node.
@@ -112,7 +112,7 @@ RC BTNonLeafNode::write(PageId pid, PageFile& pf)
  * @return the number of keys in the node
  */
 int BTNonLeafNode::getKeyCount()
-{ return 0; }
+{ return this->numKeys; }
 
 
 /*
