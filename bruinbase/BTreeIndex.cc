@@ -10,6 +10,8 @@
 #include "BTreeIndex.h"
 #include "BTreeNode.h"
 
+#include <iostream>
+
 using namespace std;
 
 /*
@@ -29,6 +31,13 @@ BTreeIndex::BTreeIndex()
  */
 RC BTreeIndex::open(const string& indexname, char mode)
 {
+    RC rc;
+
+    if ((rc = this->pf.open(indexname, mode)) < 0) {
+        cerr << "Error opening btree index file";
+        return rc;
+    }
+  
     return 0;
 }
 
@@ -38,6 +47,14 @@ RC BTreeIndex::open(const string& indexname, char mode)
  */
 RC BTreeIndex::close()
 {
+    
+    RC rc;
+
+    if ((rc = this->pf.close()) < 0) {
+        cerr << "Error close btree index file";
+        return rc;
+    }
+
     return 0;
 }
 
