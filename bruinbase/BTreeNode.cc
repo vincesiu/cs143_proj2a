@@ -25,7 +25,7 @@ RC BTLeafNode::write(PageId pid, PageFile& pf)
  * @return the number of keys in the node
  */
 int BTLeafNode::getKeyCount()
-{ return this->numKeys; }
+{ return this->keyCount; }
 
 /*
  * Insert a (key, rid) pair to the node.
@@ -34,7 +34,12 @@ int BTLeafNode::getKeyCount()
  * @return 0 if successful. Return an error code if the node is full.
  */
 RC BTLeafNode::insert(int key, const RecordId& rid)
-{ return 0; }
+{ 
+    if (this->keyCount == MAXIMUM_KEY_COUNT) {
+        //TODO error message?
+        return -1;
+    }
+    return 0; }
 
 /*
  * Insert the (key, rid) pair to the node
@@ -112,7 +117,7 @@ RC BTNonLeafNode::write(PageId pid, PageFile& pf)
  * @return the number of keys in the node
  */
 int BTNonLeafNode::getKeyCount()
-{ return this->numKeys; }
+{ return this->keyCount; }
 
 
 /*
@@ -122,7 +127,13 @@ int BTNonLeafNode::getKeyCount()
  * @return 0 if successful. Return an error code if the node is full.
  */
 RC BTNonLeafNode::insert(int key, PageId pid)
-{ return 0; }
+{ 
+    if (this->keyCount == MAXIMUM_KEY_COUNT) {
+        //Error message
+        return -1;
+    }
+    return 0; 
+}
 
 /*
  * Insert the (key, pid) pair to the node
