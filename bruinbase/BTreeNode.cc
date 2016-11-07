@@ -36,7 +36,7 @@ int BTLeafNode::getKeyCount()
 * Set the key count to n
 */
 void BTLeafNode::setKeyCount(int n) {
-    memcpy(buffer + (PageFile::PAGE_SIZE - sizeof(temp)), (char *) &n, sizeof(n));
+    memcpy(buffer + (PageFile::PAGE_SIZE - sizeof(n)), (char *) &n, sizeof(n));
 }
 
 /*
@@ -66,7 +66,8 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
     }
 
     char tempbuffer[PageFile::PAGE_SIZE];
-    int sizeToCopy = PageFile::PAGE_SIZE - (slot * 12);
+    // must subtract 12 to prevent buffer overflow
+    int sizeToCopy = PageFile::PAGE_SIZE - (slot * 12) - 12;
     
     // store everything between SLOT and end of buffer to temp array
     memcpy(tempbuffer, buffer + (slot * 12), sizeToCopy);
@@ -74,8 +75,9 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
     // store new record's key into SLOT of original buffer
     memcpy(buffer + (slot * 12), (char *) &key, sizeof(key));
 
-    // store new record's pointer info into SLOT + 4 of original buffer
-    memcpy(buffer + (slot * 12) + 4, (char *) rid, sizeof(*rid));
+    // store new record's pointers info into SLOT + 4 of original buffer
+    memcpy(buffer + (slot * 12) + 4, (char *) rid->pid, sizeof(rid->pid));
+    memcpy(buffer + (slot * 12) + 8, (char *) rid->sid, sizeof(rid->sid));
 
     // move temp buffer back to original buffer but in SLOT + 1
     memcpy(buffer + ((slot + 1) * 12), tempbuffer, sizeToCopy);
