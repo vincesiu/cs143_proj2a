@@ -136,13 +136,11 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
 {
   /* your code here */
   //input data file
-  //  FILE * fd = fopen(loadfile, 'r');
   std::ifstream input;
   std::string input_line;
   input.open(loadfile.c_str(), std::ifstream::in);
 
   //output data file
-  // 0 if no error
   RecordFile * out = new RecordFile(table + ".tbl", 'w');
 
 
@@ -152,8 +150,6 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
           int key;
           std::string value;
           SqlEngine::parseLoadLine(input_line, key, value);
-//          std::cout << key  << std::endl;
-//          std::cout << value << std::endl;
           out->append(key, value, rid);
   }
 
