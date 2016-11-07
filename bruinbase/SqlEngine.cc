@@ -143,7 +143,7 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
 
   //output data file
   // 0 if no error
-  RecordFile * out = new RecordFile(table, 'w');
+  RecordFile * out = new RecordFile(table + ".tbl", 'w');
 
 
 
@@ -154,7 +154,7 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
           SqlEngine::parseLoadLine(input_line, key, value);
 //          std::cout << key  << std::endl;
 //          std::cout << value << std::endl;
-//          std::cout << out->append(key, value, rid);
+          out->append(key, value, rid);
   }
 
 
