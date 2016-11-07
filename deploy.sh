@@ -14,9 +14,11 @@ trap cleanup EXIT
 REQUIRED_FILES=( \
         readme.txt \
         team.txt \
-        bruinbase/Makefile \
-        bruinbase/*.{cc,c,h,y,l,tbl} \
+        bruinbase/* \
         )
+#        bruinbase/Makefile \
+#        bruinbase/*.{cc,c,h,y,l,tbl} \
+#        )
 
 if [[ $INPUT = "--submit" ]]; then
     mkdir ./${BRUIN_ID}
