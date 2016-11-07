@@ -25,7 +25,19 @@ RC BTLeafNode::write(PageId pid, PageFile& pf)
  * @return the number of keys in the node
  */
 int BTLeafNode::getKeyCount()
-{ return this->keyCount; }
+{ 
+    // return this->keyCount; 
+    int temp;
+    memcpy(&temp, buffer + (PageFile::PAGE_SIZE - sizeof(temp)), sizeof(temp));
+    return temp;
+}
+
+/**
+* Set the key count to n
+*/
+void BTLeafNode::setKeyCount(int n) {
+    memcpy(buffer + (PageFile::PAGE_SIZE - sizeof(temp)), (char *) &n, sizeof(n));
+}
 
 /*
  * Insert a (key, rid) pair to the node.
@@ -35,11 +47,43 @@ int BTLeafNode::getKeyCount()
  */
 RC BTLeafNode::insert(int key, const RecordId& rid)
 { 
-    if (this->keyCount == MAXIMUM_KEY_COUNT) {
+    int keyCount = this->getKeyCount();
+    if (keyCount == MAXIMUM_KEY_COUNT) {
         //TODO error message?
         return -1;
     }
-    return 0; }
+    
+    int curKey;
+    int slot;
+    for (int i = 0; i < keyCount; i++) {
+        // key is 4 bytes, pointer is 8 bytes
+        // when slot is i, access i * 12 in buffer array
+        memcpy(&curKey, buffer + (i * 12), sizeof(curKey));
+        if (curKey > key) {
+            slot = i;
+            break;
+        }
+    }
+
+    char tempbuffer[PageFile::PAGE_SIZE];
+    int sizeToCopy = PageFile::PAGE_SIZE - (slot * 12);
+    
+    // store everything between SLOT and end of buffer to temp array
+    memcpy(tempbuffer, buffer + (slot * 12), sizeToCopy);
+
+    // store new record's key into SLOT of original buffer
+    memcpy(buffer + (slot * 12), (char *) &key, sizeof(key));
+
+    // store new record's pointer info into SLOT + 4 of original buffer
+    memcpy(buffer + (slot * 12) + 4, (char *) rid, sizeof(*rid));
+
+    // move temp buffer back to original buffer but in SLOT + 1
+    memcpy(buffer + ((slot + 1) * 12), tempbuffer, sizeToCopy);
+
+    // adjust key count
+    setKeyCount(keyCount + 1);
+    return 0; 
+}
 
 /*
  * Insert the (key, rid) pair to the node
@@ -117,7 +161,19 @@ RC BTNonLeafNode::write(PageId pid, PageFile& pf)
  * @return the number of keys in the node
  */
 int BTNonLeafNode::getKeyCount()
-{ return this->keyCount; }
+{ 
+    // return this->keyCount; 
+    int temp;
+    memcpy(&temp, buffer + (PageFile::PAGE_SIZE - sizeof(temp)), sizeof(temp));
+    return temp;
+}
+
+/**
+* Set the key count to n
+*/
+void BTNonLeafNode::setKeyCount(int n) {
+    memcpy(buffer + (PageFile::PAGE_SIZE - sizeof(temp)), (char *) &n, sizeof(n));
+}
 
 
 /*
