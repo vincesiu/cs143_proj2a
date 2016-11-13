@@ -13,7 +13,13 @@
 #include "RecordFile.h"
 #include "PageFile.h"
 
+//User defined stuff
+
+//For how many keys can be placed in a single node
 #define MAXIMUM_KEY_COUNT 70
+
+#include <string.h> //This is for memcpy
+
 
 /**
  * BTLeafNode: The class representing a B+tree leaf node.
@@ -100,6 +106,8 @@ class BTLeafNode {
     */
     RC write(PageId pid, PageFile& pf);
 
+    void setKeyCount(int n);
+
   private:
    /**
     * The main memory buffer for loading the content of the disk page 
@@ -178,6 +186,8 @@ class BTNonLeafNode {
     * @return 0 if successful. Return an error code if there is an error.
     */
     RC write(PageId pid, PageFile& pf);
+
+    void setKeyCount(int n);
 
   private:
    /**

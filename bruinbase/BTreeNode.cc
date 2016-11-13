@@ -9,7 +9,10 @@ using namespace std;
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::read(PageId pid, const PageFile& pf)
-{ return 0; }
+{ 
+    pf.read(pid, this->buffer);
+    return 0; 
+}
     
 /*
  * Write the content of the node to the page pid in the PageFile pf.
@@ -18,7 +21,10 @@ RC BTLeafNode::read(PageId pid, const PageFile& pf)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::write(PageId pid, PageFile& pf)
-{ return 0; }
+{ 
+    pf.write(pid, this->buffer); 
+    return 0; 
+}
 
 /*
  * Return the number of keys stored in the node.
@@ -36,7 +42,8 @@ int BTLeafNode::getKeyCount()
 * Set the key count to n
 */
 void BTLeafNode::setKeyCount(int n) {
-    memcpy(buffer + (PageFile::PAGE_SIZE - sizeof(n)), (char *) &n, sizeof(n));
+    //TODO
+//    memcpy(buffer + (PageFile::PAGE_SIZE - sizeof(n)), (char *) &n, sizeof(n));
 }
 
 /*
@@ -47,6 +54,8 @@ void BTLeafNode::setKeyCount(int n) {
  */
 RC BTLeafNode::insert(int key, const RecordId& rid)
 { 
+    //TODO
+    /*
     int keyCount = this->getKeyCount();
     if (keyCount == MAXIMUM_KEY_COUNT) {
         //TODO error message?
@@ -84,6 +93,7 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
 
     // adjust key count
     setKeyCount(keyCount + 1);
+    */
     return 0; 
 }
 
@@ -99,7 +109,10 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
  */
 RC BTLeafNode::insertAndSplit(int key, const RecordId& rid, 
                               BTLeafNode& sibling, int& siblingKey)
-{ return 0; }
+{ 
+    //TODO
+    return 0; 
+}
 
 /**
  * If searchKey exists in the node, set eid to the index entry
@@ -113,7 +126,10 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
  * @return 0 if searchKey is found. Otherwise return an error code.
  */
 RC BTLeafNode::locate(int searchKey, int& eid)
-{ return 0; }
+{ 
+    //TODO
+    return 0; 
+}
 
 /*
  * Read the (key, rid) pair from the eid entry.
@@ -123,14 +139,20 @@ RC BTLeafNode::locate(int searchKey, int& eid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
-{ return 0; }
+{ 
+    //TODO
+    return 0; 
+}
 
 /*
  * Return the pid of the next slibling node.
  * @return the PageId of the next sibling node 
  */
 PageId BTLeafNode::getNextNodePtr()
-{ return 0; }
+{ 
+    //TODO
+    return 0; 
+}
 
 /*
  * Set the pid of the next slibling node.
@@ -138,7 +160,10 @@ PageId BTLeafNode::getNextNodePtr()
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTLeafNode::setNextNodePtr(PageId pid)
-{ return 0; }
+{ 
+    //TODO
+    return 0; 
+}
 
 /*
  * Read the content of the node from the page pid in the PageFile pf.
@@ -147,7 +172,11 @@ RC BTLeafNode::setNextNodePtr(PageId pid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::read(PageId pid, const PageFile& pf)
-{ return 0; }
+{ 
+    pf.read(pid, this->buffer);
+    return 0; 
+}
+
     
 /*
  * Write the content of the node to the page pid in the PageFile pf.
@@ -156,7 +185,10 @@ RC BTNonLeafNode::read(PageId pid, const PageFile& pf)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::write(PageId pid, PageFile& pf)
-{ return 0; }
+{ 
+    pf.write(pid, this->buffer);
+    return 0; 
+}
 
 /*
  * Return the number of keys stored in the node.
@@ -174,7 +206,8 @@ int BTNonLeafNode::getKeyCount()
 * Set the key count to n
 */
 void BTNonLeafNode::setKeyCount(int n) {
-    memcpy(buffer + (PageFile::PAGE_SIZE - sizeof(temp)), (char *) &n, sizeof(n));
+    //TODO
+//    memcpy(buffer + (PageFile::PAGE_SIZE - sizeof(temp)), (char *) &n, sizeof(n));
 }
 
 
@@ -204,7 +237,10 @@ RC BTNonLeafNode::insert(int key, PageId pid)
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, int& midKey)
-{ return 0; }
+{ 
+    //TODO
+    return 0; 
+}
 
 /*
  * Given the searchKey, find the child-node pointer to follow and
@@ -214,7 +250,10 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
  * @return 0 if successful. Return an error code if there is an error.
  */
 RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
-{ return 0; }
+{ 
+    //TODO
+    return 0; 
+}
 
 /*
  * Initialize the root node with (pid1, key, pid2).
