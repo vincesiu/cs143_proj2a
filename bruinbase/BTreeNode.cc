@@ -310,18 +310,18 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
 
     RecordId record;
 
-    for (int i = 0; i < keyCount; i++) {
-        memcpy(&curKey, buffer + (i * 8), sizeof(int));
+    int i;
+    for (i = 0; i < keyCount; i++) {
+        memcpy(&curKey, buffer + (i * 8) + sizeof(int), sizeof(int));
         
-        if (curKey == searchKey) {
-            memcpy(&pid, buffer + (i*8) + sizeof(int), sizeof(PageId));
-            ret = 0;
-            break;
+        if (curKey > searchKey) {
+            memcpy(&pid, buffer + (i * 8), sizeof(PageId));
+            return 0;
         } 
     }
 
-    return ret;
-
+    memcpy(&pid, buffer + (i*8), sizeof(PageId));
+    return 0;
 }
 
 /*
