@@ -42,8 +42,7 @@ int BTLeafNode::getKeyCount()
 * Set the key count to n
 */
 void BTLeafNode::setKeyCount(int n) {
-    //TODO
-//    memcpy(buffer + (PageFile::PAGE_SIZE - sizeof(n)), (char *) &n, sizeof(n));
+   memcpy(buffer + (PageFile::PAGE_SIZE - sizeof(n)), (char *) &n, sizeof(n));
 }
 
 /*
@@ -55,45 +54,36 @@ void BTLeafNode::setKeyCount(int n) {
 RC BTLeafNode::insert(int key, const RecordId& rid)
 { 
     //TODO
-    /*
+    
     int keyCount = this->getKeyCount();
     if (keyCount == MAXIMUM_KEY_COUNT) {
         //TODO error message?
         return -1;
     }
-    
-    int curKey;
-    int slot;
-    for (int i = 0; i < keyCount; i++) {
-        // key is 4 bytes, pointer is 8 bytes
-        // when slot is i, access i * 12 in buffer array
-        memcpy(&curKey, buffer + (i * 12), sizeof(curKey));
-        if (curKey > key) {
-            slot = i;
-            break;
-        }
-    }
+
+    int eid;
+    RC returncode = BTLeafNode::locate(key, eid);
 
     char tempbuffer[PageFile::PAGE_SIZE];
     // must subtract 12 to prevent buffer overflow
-    int sizeToCopy = PageFile::PAGE_SIZE - (slot * 12) - 12;
+    int sizeToCopy = PageFile::PAGE_SIZE - (eid * 12) - 12;
     
-    // store everything between SLOT and end of buffer to temp array
-    memcpy(tempbuffer, buffer + (slot * 12), sizeToCopy);
+    // store everything between eid and end of buffer to temp array
+    memcpy(tempbuffer, buffer + (eid * 12), sizeToCopy);
 
-    // store new record's key into SLOT of original buffer
-    memcpy(buffer + (slot * 12), (char *) &key, sizeof(key));
+    // store new record's key into eid of original buffer
+    memcpy(buffer + (eid * 12), (char *) &key, sizeof(key));
 
-    // store new record's pointers info into SLOT + 4 of original buffer
-    memcpy(buffer + (slot * 12) + 4, (char *) rid->pid, sizeof(rid->pid));
-    memcpy(buffer + (slot * 12) + 8, (char *) rid->sid, sizeof(rid->sid));
+    // store new record's pointers info into eid + 4 of original buffer
+    memcpy(buffer + (eid * 12) + 4, (char *) rid.pid, sizeof(rid.pid));
+    memcpy(buffer + (eid * 12) + 8, (char *) rid.sid, sizeof(rid.sid));
 
-    // move temp buffer back to original buffer but in SLOT + 1
-    memcpy(buffer + ((slot + 1) * 12), tempbuffer, sizeToCopy);
+    // move temp buffer back to original buffer but in eid + 1
+    memcpy(buffer + ((eid + 1) * 12), tempbuffer, sizeToCopy);
 
     // adjust key count
     setKeyCount(keyCount + 1);
-    */
+    
     return 0; 
 }
 
@@ -127,8 +117,29 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
  */
 RC BTLeafNode::locate(int searchKey, int& eid)
 { 
-    //TODO
-    return 0; 
+    int keyCount = this->getKeyCount();
+    int curKey;
+    int slot = -1;
+
+    RC ret = RC_NO_SUCH_RECORD;
+    for (int i = 0; i < keyCount; i++) {
+        // key is 4 bytes, pointer is 8 bytes
+        // when eid is i, access i * 12 in buffer array
+        memcpy(&curKey, buffer + (i * 12), sizeof(curKey));
+        if (curKey == searchKey) {
+            slot = i;
+            ret = 0;
+            break;
+        } else if (curKey > searchKey) {
+        	slot = i;
+        	break;
+        }
+    }
+
+    if (slot == -1) eid = keyCount;
+    else eid = slot;
+
+    return ret;
 }
 
 /*
@@ -206,8 +217,7 @@ int BTNonLeafNode::getKeyCount()
 * Set the key count to n
 */
 void BTNonLeafNode::setKeyCount(int n) {
-    //TODO
-//    memcpy(buffer + (PageFile::PAGE_SIZE - sizeof(temp)), (char *) &n, sizeof(n));
+   memcpy(buffer + (PageFile::PAGE_SIZE - sizeof(n)), (char *) &n, sizeof(n));
 }
 
 
