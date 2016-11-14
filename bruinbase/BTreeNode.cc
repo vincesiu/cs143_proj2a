@@ -172,8 +172,9 @@ RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
  */
 PageId BTLeafNode::getNextNodePtr()
 { 
-    //TODO
-    return 0; 
+    PageId temp;
+    memcpy(&temp, buffer + (PageFile::PAGE_SIZE - ( 2 * sizeof(int) ) ), sizeof(temp));
+    return temp; 
 }
 
 /*
@@ -183,7 +184,7 @@ PageId BTLeafNode::getNextNodePtr()
  */
 RC BTLeafNode::setNextNodePtr(PageId pid)
 { 
-    //TODO
+    memcpy(buffer + (PageFile::PAGE_SIZE - (2 * sizeof(pid))), (char *) &pid, sizeof(pid));
     return 0; 
 }
 
