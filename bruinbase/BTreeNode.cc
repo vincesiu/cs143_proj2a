@@ -32,7 +32,6 @@ RC BTLeafNode::write(PageId pid, PageFile& pf)
  */
 int BTLeafNode::getKeyCount()
 { 
-    // return this->keyCount; 
     int temp;
     memcpy(&temp, buffer + (PageFile::PAGE_SIZE - sizeof(temp)), sizeof(temp));
     return temp;
@@ -66,7 +65,6 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
 
     if (returncode == 0) {
     	// TODO: error -> key already exists in node
-    	return -2;
     }
 
     char tempbuffer[PageFile::PAGE_SIZE];
@@ -105,7 +103,35 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
 RC BTLeafNode::insertAndSplit(int key, const RecordId& rid, 
                               BTLeafNode& sibling, int& siblingKey)
 { 
-    //TODO
+    int eid;
+
+    RC returncode = this->locate(key, eid);
+
+    if (returncode == 0) {
+    	// TODO: error -> key already exists in node
+    }
+
+    char tempbuffer[PageFile::PAGE_SIZE];
+    // must subtract 12 to prevent buffer overflow
+    int sizeToCopy = PageFile::PAGE_SIZE - (eid * 12) - 12;
+
+    memcpy(tempbuffer, buffer + (eid * 12), sizeToCopy);
+    memcpy(buffer + (eid * 12), (char *) &key, sizeof(key));
+    memcpy(buffer + (eid * 12) + 4, (char *) rid.pid, sizeof(rid.pid));
+    memcpy(buffer + (eid * 12) + 8, (char *) rid.sid, sizeof(rid.sid));
+    memcpy(buffer + ((eid + 1) * 12), tempbuffer, sizeToCopy);
+
+    int currentKeyCount = this->getKeyCount();
+    int siblingKeyCount = currentKeyCount / 2;
+    if (currentKeyCount % 2 != 0) {
+        siblingKeyCount++;
+    }
+    currentKeyCount = currentKeyCount / 2;
+
+    memcpy(sibling.buffer, this->buffer, 12 * siblingKeyCount);
+    sibling.setKeyCount(siblingKeyCount);
+
+    this->setKeyCount(currentKeyCount);
     return 0; 
 }
 
@@ -127,10 +153,13 @@ RC BTLeafNode::locate(int searchKey, int& eid)
     int slot = -1;
 
     RC ret = RC_NO_SUCH_RECORD;
+    RecordId record;
     for (int i = 0; i < keyCount; i++) {
         // key is 4 bytes, pointer is 8 bytes
         // when eid is i, access i * 12 in buffer array
-        memcpy(&curKey, buffer + (i * 12), sizeof(curKey));
+        this->readEntry(i, curKey, record);
+        
+        //memcpy(&curKey, buffer + (i * 12), sizeof(curKey));
         if (curKey == searchKey) {
             slot = i;
             ret = 0;
