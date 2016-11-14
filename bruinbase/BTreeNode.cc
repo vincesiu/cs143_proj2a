@@ -270,10 +270,38 @@ void BTNonLeafNode::setKeyCount(int n) {
  */
 RC BTNonLeafNode::insert(int key, PageId pid)
 { 
-    if (this->keyCount == MAXIMUM_KEY_COUNT) {
-        //Error message
+    int keyCount = this->getKeyCount();
+    int curKey;
+
+    if (keyCount == MAXIMUM_KEY_COUNT) {
+        // TODO: error -> node is full
         return -1;
     }
+
+    int idx;
+    for (idx = 0; idx < keyCount; idx++) {
+        memcpy(&curKey, buffer + (idx * 8) + sizeof(int), sizeof(int));
+        
+        if (curKey > key) {
+            break;
+        } 
+    }
+
+    // move everything after to tempbuffer
+    char tempbuffer[PageFile::PAGE_SIZE];
+    int sizeToCopy = PageFile::PAGE_SIZE - (idx * 8) - 8;
+    memcpy(tempbuffer, buffer + (idx * 8), sizeToCopy);
+
+    // store new things in
+    memcpy(buffer + (idx * 8), (char *) &pid, sizeof(pid));
+    memcpy(buffer + (idx * 8 + 1), (char *) &key, sizeof(key));
+
+    // move temp buffer back to original buffer but in eid + 1
+    memcpy(buffer + ((idx + 1) * 8), tempbuffer, sizeToCopy);
+
+    // adjust key count
+    setKeyCount(keyCount + 1);
+    
     return 0; 
 }
 
