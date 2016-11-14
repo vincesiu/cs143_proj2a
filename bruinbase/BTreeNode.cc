@@ -57,12 +57,17 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
     
     int keyCount = this->getKeyCount();
     if (keyCount == MAXIMUM_KEY_COUNT) {
-        //TODO error message?
+        // TODO: error -> node is full
         return -1;
     }
 
     int eid;
     RC returncode = BTLeafNode::locate(key, eid);
+
+    if (returncode == 0) {
+    	// TODO: error -> key already exists in node
+    	return -2;
+    }
 
     char tempbuffer[PageFile::PAGE_SIZE];
     // must subtract 12 to prevent buffer overflow
@@ -151,7 +156,13 @@ RC BTLeafNode::locate(int searchKey, int& eid)
  */
 RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
 { 
-    //TODO
+    int keyCount = this->getKeyCount();
+    if (eid > keyCount) return -1;
+
+    memcpy(&key, buffer + (eid * 12), sizeof(key));
+    memcpy(&rid.pid, buffer + (eid * 12) + 4, sizeof(rid.pid));
+    memcpy(&rid.sid, buffer + (eid * 12) + 8, sizeof(rid.sid));
+
     return 0; 
 }
 
