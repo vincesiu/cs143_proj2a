@@ -302,8 +302,26 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
  */
 RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
 { 
-    //TODO
-    return 0; 
+    int keyCount = this->getKeyCount();
+    int curKey;
+    int slot = -1;
+
+    RC ret = RC_NO_SUCH_RECORD;
+
+    RecordId record;
+
+    for (int i = 0; i < keyCount; i++) {
+        memcpy(&curKey, buffer + (i * 8), sizeof(int));
+        
+        if (curKey == searchKey) {
+            memcpy(&pid, buffer + (i*8) + sizeof(int), sizeof(PageId));
+            ret = 0;
+            break;
+        } 
+    }
+
+    return ret;
+
 }
 
 /*
@@ -319,14 +337,11 @@ RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
 
     //set things
     //////////////////////
-    int address = 0;
-    memcpy(this->buffer, (char *) &pid1, address);
+    memcpy(this->buffer, (char *) &pid1, sizeof(PageId));
 
-    address += sizeof(pid1);
-    memcpy(this->buffer, (char *) &key, address);
+    memcpy(this->buffer + sizeof(PageId), (char *) &key, sizeof(int));
 
-    address += sizeof(key);
-    memcpy(this->buffer, (char *) &pid2, address);
+    memcpy(this->buffer + sizeof(PageId) + sizeof(int) , (char *) &pid2, sizeof(PageId));
 
     this->setKeyCount(1); //set keycount to 1
     
