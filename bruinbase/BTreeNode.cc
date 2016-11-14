@@ -132,6 +132,7 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
     sibling.setKeyCount(siblingKeyCount);
 
     this->setKeyCount(currentKeyCount);
+    memcpy(&siblingKey, sibling.buffer, sizeof(key));
     return 0; 
 }
 
