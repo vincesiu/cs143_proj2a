@@ -318,7 +318,46 @@ RC BTNonLeafNode::insert(int key, PageId pid)
  */
 RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, int& midKey)
 { 
-    //TODO
+    int idx;
+    int keyCount = this->getKeyCount();
+    int curKey;
+
+    for (idx = 0; idx < keyCount; idx++) {
+        memcpy(&curKey, buffer + (idx * 8) + sizeof(int), sizeof(int));
+        
+        if (curKey > key) {
+            break;
+        } 
+    }
+
+    // move everything after to tempbuffer
+    char tempbuffer[PageFile::PAGE_SIZE];
+    int sizeToCopy = PageFile::PAGE_SIZE - (idx * 8) - 8;
+    memcpy(tempbuffer, buffer + (idx * 8), sizeToCopy);
+
+    // store new things in
+    memcpy(buffer + (idx * 8), (char *) &pid, sizeof(pid));
+    memcpy(buffer + (idx * 8 + 1), (char *) &key, sizeof(key));
+
+    // move temp buffer back to original buffer but in eid + 1
+    memcpy(buffer + ((idx + 1) * 8), tempbuffer, sizeToCopy);
+
+    //split into two 
+
+    int currentKeyCount = this->getKeyCount();
+    int siblingKeyCount = currentKeyCount / 2;
+    if (currentKeyCount % 2 != 0) {
+        siblingKeyCount++;
+    }
+    currentKeyCount = currentKeyCount / 2;
+
+    memcpy(sibling.buffer, this->buffer + currentKeyCount * 8, siblingKeyCount * 8);
+    this->setKeyCount(currentKeyCount);
+    sibling.setKeyCount(siblingKeyCount);
+
+
+
+
     return 0; 
 }
 
