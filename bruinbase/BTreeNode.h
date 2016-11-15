@@ -19,13 +19,19 @@
 #define MAXIMUM_KEY_COUNT 70
 
 #include <string.h> //This is for memcpy
-
+#include <cstdio> // for printf
 
 /**
  * BTLeafNode: The class representing a B+tree leaf node.
  */
 class BTLeafNode {
   public:
+    BTLeafNode() {
+        memset(buffer, 0, PageFile::PAGE_SIZE);
+    }
+
+   void printNode();
+
    /**
     * Insert the (key, rid) pair to the node.
     * Remember that all keys inside a B+tree node should be kept sorted.
@@ -114,7 +120,6 @@ class BTLeafNode {
     * that contains the node.
     */
     char buffer[PageFile::PAGE_SIZE];
-    int keyCount;
 }; 
 
 

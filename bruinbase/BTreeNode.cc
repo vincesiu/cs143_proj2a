@@ -2,6 +2,21 @@
 
 using namespace std;
 
+
+void BTLeafNode::printNode() {
+    int keyCount = getKeyCount();
+    int i;
+    printf("Printing BTLeafNode with %i elements\n", keyCount);
+    for (i = 0; i < keyCount; i++) {
+        int key;
+        RecordId record;
+        readEntry(i, key, record);
+        printf("key: %i   pid: %i   sid: %i\n", key, record.pid, record.sid);
+    }
+    printf("Done printing\n");
+    return;
+}
+
 /*
  * Read the content of the node from the page pid in the PageFile pf.
  * @param pid[IN] the PageId to read
@@ -53,7 +68,6 @@ void BTLeafNode::setKeyCount(int n) {
 RC BTLeafNode::insert(int key, const RecordId& rid)
 { 
     //TODO
-    
     int keyCount = this->getKeyCount();
     if (keyCount == MAXIMUM_KEY_COUNT) {
         // TODO: error -> node is full
@@ -65,6 +79,7 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
 
     if (returncode == 0) {
     	// TODO: error -> key already exists in node
+        return -2;
     }
 
     char tempbuffer[PageFile::PAGE_SIZE];
@@ -78,15 +93,14 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
     memcpy(buffer + (eid * 12), (char *) &key, sizeof(key));
 
     // store new record's pointers info into eid + 4 of original buffer
-    memcpy(buffer + (eid * 12) + 4, (char *) rid.pid, sizeof(rid.pid));
-    memcpy(buffer + (eid * 12) + 8, (char *) rid.sid, sizeof(rid.sid));
+    memcpy(buffer + (eid * 12) + 4, (char *) &rid.pid, sizeof(rid.pid));
+    memcpy(buffer + (eid * 12) + 8, (char *) &rid.sid, sizeof(rid.sid));
 
     // move temp buffer back to original buffer but in eid + 1
     memcpy(buffer + ((eid + 1) * 12), tempbuffer, sizeToCopy);
 
     // adjust key count
     setKeyCount(keyCount + 1);
-    
     return 0; 
 }
 
@@ -103,36 +117,43 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
 RC BTLeafNode::insertAndSplit(int key, const RecordId& rid, 
                               BTLeafNode& sibling, int& siblingKey)
 { 
+    int keyCount = getKeyCount();
     int eid;
 
     RC returncode = this->locate(key, eid);
 
     if (returncode == 0) {
-    	// TODO: error -> key already exists in node
+    	return -1;
     }
 
     char tempbuffer[PageFile::PAGE_SIZE];
     // must subtract 12 to prevent buffer overflow
     int sizeToCopy = PageFile::PAGE_SIZE - (eid * 12) - 12;
-
+    
     memcpy(tempbuffer, buffer + (eid * 12), sizeToCopy);
+
     memcpy(buffer + (eid * 12), (char *) &key, sizeof(key));
-    memcpy(buffer + (eid * 12) + 4, (char *) rid.pid, sizeof(rid.pid));
-    memcpy(buffer + (eid * 12) + 8, (char *) rid.sid, sizeof(rid.sid));
+    memcpy(buffer + (eid * 12) + 4, (char *) &rid.pid, sizeof(rid.pid));
+    memcpy(buffer + (eid * 12) + 8, (char *) &rid.sid, sizeof(rid.sid));
+    
     memcpy(buffer + ((eid + 1) * 12), tempbuffer, sizeToCopy);
 
-    int currentKeyCount = this->getKeyCount();
-    int siblingKeyCount = currentKeyCount / 2;
-    if (currentKeyCount % 2 != 0) {
-        siblingKeyCount++;
-    }
-    currentKeyCount = currentKeyCount / 2;
+    // adjust key count
+    setKeyCount(keyCount++);
 
-    memcpy(sibling.buffer, this->buffer + 12 * currentKeyCount, 12 * siblingKeyCount);
+    int newKeyCount = keyCount / 2;
+    if (keyCount % 2 != 0) {
+        newKeyCount++;
+    }
+    int siblingKeyCount = keyCount - newKeyCount;
+
+    // move to sibling buffer -- will have direct access since same class
+    memcpy(sibling.buffer, this->buffer + 12 * newKeyCount, 12 * siblingKeyCount);
     sibling.setKeyCount(siblingKeyCount);
 
-    this->setKeyCount(currentKeyCount);
+    setKeyCount(newKeyCount);
     memcpy(&siblingKey, sibling.buffer, sizeof(key));
+
     return 0; 
 }
 
