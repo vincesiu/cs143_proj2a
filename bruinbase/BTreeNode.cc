@@ -239,6 +239,27 @@ RC BTLeafNode::setNextNodePtr(PageId pid)
     return 0; 
 }
 
+
+void BTNonLeafNode::printNode() {
+    int keyCount = getKeyCount();
+    int i = 0;
+    PageId pid;
+    int key;
+    printf("Printing BTNonLeafNode with %i elements\n", keyCount);
+    
+    // print first pid in node:
+    memcpy(&pid, buffer, sizeof(pid));
+    printf("pid_%i: %i\n", i, pid);
+
+    for (i = 0; i < keyCount;) {
+        memcpy(&key, buffer + (i * 8) + sizeof(key), sizeof(key));
+        memcpy(&pid, buffer + (++i * 8), sizeof(pid));
+        printf("key_%i: %i     pid_%i: %i\n", i-1, key, i, pid);
+    }
+    printf("Done printing\n");
+    return;   
+}
+
 /*
  * Read the content of the node from the page pid in the PageFile pf.
  * @param pid[IN] the PageId to read
@@ -311,15 +332,15 @@ RC BTNonLeafNode::insert(int key, PageId pid)
 
     // move everything after to tempbuffer
     char tempbuffer[PageFile::PAGE_SIZE];
-    int sizeToCopy = PageFile::PAGE_SIZE - (idx * 8) - 8;
-    memcpy(tempbuffer, buffer + (idx * 8), sizeToCopy);
+    int sizeToCopy = PageFile::PAGE_SIZE - (idx * 8) - 12; // - 8 for what we are inserting, -4 to position correctly
+    memcpy(tempbuffer, buffer + (idx * 8) + 4, sizeToCopy);
 
     // store new things in
-    memcpy(buffer + (idx * 8), (char *) &pid, sizeof(pid));
-    memcpy(buffer + (idx * 8 + 1), (char *) &key, sizeof(key));
+    memcpy(buffer + (idx * 8) + 4, (char *) &key, sizeof(key));
+    memcpy(buffer + ((idx + 1) * 8), (char *) &pid, sizeof(pid));
 
     // move temp buffer back to original buffer but in eid + 1
-    memcpy(buffer + ((idx + 1) * 8), tempbuffer, sizeToCopy);
+    memcpy(buffer + ((idx + 1) * 8) + 4, tempbuffer, sizeToCopy);
 
     // adjust key count
     setKeyCount(keyCount + 1);
@@ -353,31 +374,34 @@ RC BTNonLeafNode::insertAndSplit(int key, PageId pid, BTNonLeafNode& sibling, in
 
     // move everything after to tempbuffer
     char tempbuffer[PageFile::PAGE_SIZE];
-    int sizeToCopy = PageFile::PAGE_SIZE - (idx * 8) - 8;
-    memcpy(tempbuffer, buffer + (idx * 8), sizeToCopy);
+    int sizeToCopy = PageFile::PAGE_SIZE - (idx * 8) - 12; // - 8 for what we are inserting, -4 to position correctly
+    memcpy(tempbuffer, buffer + (idx * 8) + 4, sizeToCopy);
 
     // store new things in
-    memcpy(buffer + (idx * 8), (char *) &pid, sizeof(pid));
-    memcpy(buffer + (idx * 8 + 1), (char *) &key, sizeof(key));
+    memcpy(buffer + (idx * 8) + 4, (char *) &key, sizeof(key));
+    memcpy(buffer + ((idx + 1) * 8), (char *) &pid, sizeof(pid));
 
     // move temp buffer back to original buffer but in eid + 1
-    memcpy(buffer + ((idx + 1) * 8), tempbuffer, sizeToCopy);
+    memcpy(buffer + ((idx + 1) * 8) + 4, tempbuffer, sizeToCopy);
 
-    //split into two 
+    // adjust key count
+    setKeyCount(keyCount + 1);
 
+
+    // split into two 
     int currentKeyCount = this->getKeyCount();
     int siblingKeyCount = currentKeyCount / 2;
-    if (currentKeyCount % 2 != 0) {
-        siblingKeyCount++;
-    }
+    // middle key will be copied so don't increment
     currentKeyCount = currentKeyCount / 2;
 
-    memcpy(sibling.buffer, this->buffer + currentKeyCount * 8, siblingKeyCount * 8);
+    // we move the remaining elements to sibling, WITHOUT COPYING MIDPOINT VALUE, it is MOVED not COPIED
+    memcpy(sibling.buffer, this->buffer + (currentKeyCount + 1) * 8, (siblingKeyCount) * 8 + sizeof(int));
+
     this->setKeyCount(currentKeyCount);
     sibling.setKeyCount(siblingKeyCount);
 
-
-
+    // get midpoint value
+    memcpy(&midKey, buffer + ((currentKeyCount+1) * 8) - sizeof(int), sizeof(int));
 
     return 0; 
 }
@@ -422,7 +446,7 @@ RC BTNonLeafNode::locateChildPtr(int searchKey, PageId& pid)
  */
 RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
 { 
-    memset(this->buffer, PageFile::PAGE_SIZE, sizeof(char)); //reset buffer
+    memset(buffer, 0, PageFile::PAGE_SIZE);
 
     //set things
     //////////////////////
