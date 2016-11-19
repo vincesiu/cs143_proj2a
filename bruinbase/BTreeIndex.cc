@@ -29,7 +29,62 @@ BTreeIndex::BTreeIndex()
  */
 RC BTreeIndex::open(const string& indexname, char mode)
 {
-    return 0;
+    RC __ret = -1; //Used for return cord
+    char * buffer[PageFile::PAGE_SIZE]; //used for writing in and out the index metadata
+    int * buffer_int; //used for writing ints to athe "buffer" variable
+
+
+    if ( mode == 'r' ) {
+        //Will open the file. Errors thrown if the file does not have metadata in page 0
+        //  or if the file cannot be opened. Otherwise, it will memcpy the metadata into
+        //  member variables
+
+        this->mode = mode;
+
+        if (this->pf.open(indexname, mode) != 0) {
+            return RC_FILE_OPEN_FAILED;
+        }
+
+        if (this->pf.endPid() == 0) {
+            return RC_FILE_OPEN_FAILED;
+        }
+
+        this->pf.read(0, buffer);
+
+        memcpy((void *) &(this->treeHeight), buffer, sizeof(int));
+
+        __ret = 0;
+
+    } else if ( mode == 'w' ) {
+        //Will open the file. Errors thrown if the file cannot be opened. If index metadata
+        //  exists, it will memcpy it into member variables. Otherwise, it will initialize
+        //  them manually.
+
+        this->mode = mode;
+
+        if (this->pf.open(indexname, mode) != 0) {
+            return RC_FILE_OPEN_FAILED;
+        }
+
+        if (this->pf.endPid() == 0) {
+            //Initialize
+            int * buffer_int = (int *) buffer;
+            *buffer_int = 1;
+            this->pf.write(0, buffer);
+            this->treeHeight = 1;
+        } else {
+            this->pf.read(0, buffer);
+            memcpy((void *) &(this->treeHeight), buffer, sizeof(int));
+        }
+
+        __ret = 0;
+
+    } else {
+        //Invalid mode passed in
+        __ret = RC_FILE_OPEN_FAILED;
+    }
+
+    return __ret;
 }
 
 /*
@@ -85,5 +140,10 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
  */
 RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 {
+    return 0;
+}
+
+
+RC insertHelper(int key, const RecordId& rid, int treeLevel) {
     return 0;
 }

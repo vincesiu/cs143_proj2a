@@ -87,16 +87,23 @@ class BTreeIndex {
    * @return error code. 0 if no error
    */
   RC readForward(IndexCursor& cursor, int& key, RecordId& rid);
+
+  RC insertHelper(int key, const RecordId& rid, int treeLevel);
   
  private:
+
   PageFile pf;         /// the PageFile used to store the actual b+tree in disk
 
-  PageId   rootPid;    /// the PageId of the root node
+  PageId   rootPid;    /// the PageId of the root node DEFAULT GOING TO BE 1
   int      treeHeight; /// the height of the tree
   /// Note that the content of the above two variables will be gone when
   /// this class is destructed. Make sure to store the values of the two 
   /// variables in disk, so that they can be reconstructed when the index
   /// is opened again later.
+  ////////////////////////////////////////////////////
+  //Custom Variables
+  char mode; // holds read or write variable
+
 };
 
 #endif /* BTREEINDEX_H */
