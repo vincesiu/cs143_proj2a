@@ -72,12 +72,14 @@ int main (int argc, char **argv) {
     printf(" Good!\n");
 
     printf("Testing advanced insert functionality (inserting into a nonleaf):");
-    for (i = 71; i < 105; i++) {
+    for (i = 71; i < 107; i++) {
         rid.pid = 0;
         rid.sid = i;
         assert(index.insert(i, rid) == 0);
     }
+
     index.debugPrintout();
+
 
     printf(" Good!\n");
 

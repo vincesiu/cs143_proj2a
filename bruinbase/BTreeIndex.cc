@@ -126,6 +126,7 @@ RC BTreeIndex::close()
  */
 RC BTreeIndex::insert(int key, const RecordId& rid)
 {
+
     BTNonLeafNode node;
     PageId rootPid = this->getRootPid();
 
@@ -134,6 +135,7 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
 
     RC ret = this->insertHelper(key, rid, 1, rootPid, siblingPid, siblingKey);
 
+    //Handles updating of rootPid
     if (siblingPid != rootPid) {
         this->rootPid = this->pf.endPid();
         this->treeHeight = this->treeHeight + 1;
@@ -142,28 +144,6 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
     }
 
     return ret;
-    /*
-    BTLeafNode leafNode;
-    PageId pid = 1;
-    leafNode.read(pid, this->pf);
-    RC ret;
-
-    ret = leafNode.insert(key, rid);
-    //Going to have to handle case of full node
-    if (ret != 0) {
-        return ret;
-    }
-    if (ret == RC_NODE_FULL) {
-        //TODO
-        return -1;
-    }
-
-    ret = leafNode.write(pid, this->pf);
-    if (ret != 0) {
-        return ret;
-    }
-    return 0;
-    */
 }
 
 /**
@@ -186,7 +166,6 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
  */
 RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
 {
-    //TODO needs testing with non-leafs
     BTNonLeafNode nonLeafNode;
     BTLeafNode leafNode;
 
@@ -194,6 +173,7 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
     PageId pid = this->getRootPid();
     RC ret;
 
+    //Traversing down to leaf node
     while(currentLevel < this->getTreeHeight()) {
         ret = nonLeafNode.read(pid, this->pf);
         if (ret != 0) {
@@ -208,6 +188,7 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
         currentLevel++;
     }
 
+    //Getting value
     ret = leafNode.read(pid, this->pf);
     if (ret != 0) {
         if (DEBUG) { printf("INDEX LOCATE DESCENT FAILED DURING LEAF NODE READ"); }
@@ -227,25 +208,34 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
  * @param key[OUT] the key stored at the index cursor location.
  * @param rid[OUT] the RecordId stored at the index cursor location.
  * @return error code. 0 if no error
+ * Error modes:
+ *  RC_INVALID_CURSOR: either pid or eid is not valid
+ *  RC_END_OF_TREE: returned last element of tree
  */
 RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 {
     BTLeafNode node;
+    //I will signal a pid of 0 as the end of tree. This is because it's
+    //the default nextNodePtr when constructing a new leaf node, and I 
+    //am too lazy to change it
+    if (cursor.pid == 0) {
+        return RC_END_OF_TREE;
+    }
 
     if (node.read(cursor.pid, this->pf) != 0) {
         return RC_INVALID_CURSOR;
     }
 
-    node.readEntry(cursor.eid, key, rid);
+    if (node.readEntry(cursor.eid, key, rid) != 0) {
+        return RC_INVALID_CURSOR;
+    }
 
-    if (cursor.eid < node.getKeyCount()) {
+    //Setting next cursor
+    if (cursor.eid < node.getKeyCount() - 1) {
         cursor.eid++;
     } else {
         cursor.eid = 0;
         cursor.pid = node.getNextNodePtr();
-        if (cursor.pid == 0) {
-            return RC_END_OF_TREE;
-        }
     }
 
     return 0;
@@ -258,6 +248,7 @@ RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 //pid: provided pid of current node we are examining
 //retPid: return pid, pid != ret iff we insert and split
 //ret_key: changed iff insert and split
+//This function is SOOO GNARLY. I'll try to fix it, but it's probably not gonna happen
 RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId pid, PageId& retPid, int& siblingKey) {
     BTLeafNode leafNode;
     BTLeafNode siblingLeaf;
@@ -275,7 +266,7 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
         leafNode.read(pid, this->pf);
         ret = leafNode.insert(key, rid);
         if (ret == RC_NODE_FULL) {
-            //Split!
+            //Handling a full leaf node, use insertAndSplit
             ret = leafNode.insertAndSplit(key, rid, siblingLeaf, siblingKey);
             retPid = this->pf.endPid();
             leafNode.setNextNodePtr(retPid);
@@ -291,12 +282,13 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
             return ret;
         }
     } else {
-        //Traverse down tree, and handle splits as required
+        //Traverse down tree
         nonLeafNode.read(pid, this->pf);
         nonLeafNode.locateChildPtr(key, childPid);
         childSiblingPid = childPid;
         ret = insertHelper(key, rid, treeLevel + 1, childPid, childSiblingPid, childSiblingKey);
 
+        //Handling an insertAndSplit lower in the tree
         /*
         if (childPid != childSiblingPid) {
             //Insert!!!
@@ -312,16 +304,6 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
 
     return 0;
 }
-
-/*
-TODO REMOVE THIS BOOKMARK
-typedef struct {
-  // PageId of the index entry
-  PageId  pid;  
-  // The entry number inside the node
-  int     eid;  
-} IndexCursor;
-*/
 
 //Debugging function
 ////////////////////////////////
@@ -352,16 +334,11 @@ void BTreeIndex::debugPrintout() {
 
     while (this->readForward(cursor, key, rid) == 0) {
         printf("------------\n");
-        printf("cursor page: %d\n", cursor.pid);
-        printf("cursor eid: %d\n", cursor.eid);
-        printf("key:  %d\n", key);
-        /*
-        printf("record page id:  %d\n", rid.pid);
-        printf("record slot id:  %d\n", rid.sid);
-        */
+        printf("Current key:      %d\n", key);
+        printf("Next cursor page: %d\n", cursor.pid);
+        printf("Next cursor eid:  %d\n", cursor.eid);
     }
 
-//RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
     printf("----End   Printout-----\n");
 }
 
