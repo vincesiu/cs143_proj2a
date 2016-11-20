@@ -5,6 +5,10 @@
 #include "BTreeIndex.h"
 
 int main (int argc, char **argv) {
+    //Random variables
+    IndexCursor cursor;
+    int i;
+    RecordId rid;
 
     printf("----------------Beginning Tests:--------------------\n");
 
@@ -30,10 +34,8 @@ int main (int argc, char **argv) {
     printf(" Good!\n");
     index.debugPrintout();
 
-    printf("Testing insert functionality:");
+    printf("Testing basic insert functionality:");
 
-    int i;
-    RecordId rid;
     for (i = 0; i < 70; i++) {
         rid.pid = 0;
         rid.sid = i;
@@ -42,6 +44,18 @@ int main (int argc, char **argv) {
 
     printf(" Good!\n");
     index.debugPrintout();
+
+
+    printf("Testing basic search functionality:");
+    assert(index.locate(1, cursor) == 0);
+    assert(cursor.pid == 1);
+    assert(cursor.eid == 1);
+    assert(index.locate(69, cursor) == 0);
+    assert(cursor.pid == 1);
+    assert(cursor.eid == 69);
+    assert(index.locate(70, cursor) == RC_NO_SUCH_RECORD);
+    printf(" Good!\n");
+
 
 
     printf("----------------Ending Test--------------------\n");

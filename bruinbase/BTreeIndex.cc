@@ -12,6 +12,7 @@
 
 using namespace std;
 
+#define DEBUG 1
 
 /*
  * BTreeIndex constructor
@@ -68,17 +69,18 @@ RC BTreeIndex::open(const string& indexname, char mode)
         }
 
         if (this->pf.endPid() == 0) {
-            //Initialization
+            //Initializing data for metadata page
             *((int *) buffer) = 1;
             *((int *) buffer + 1) = 1;
             this->pf.write(0, buffer);
             this->treeHeight = 1;
             this->rootPid = 1;
 
-            //Setting first root node
+            //Setting up the root node
             memset(buffer, 0, PageFile::PAGE_SIZE);
             this->pf.write(1, buffer);
         } else {
+            //Reading in data from metada page
             this->pf.read(0, buffer);
             memcpy((void *) &(this->rootPid), buffer, sizeof(int));
             memcpy((void *) &(this->treeHeight), ((int *) buffer) + 1, sizeof(int));
@@ -160,7 +162,37 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
  */
 RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
 {
-    return 0;
+    //TODO needs testing with non-leafs
+    BTNonLeafNode nonLeafNode;
+    BTLeafNode leafNode;
+
+    int currentLevel = 1;
+    PageId pid = this->getRootPid();
+    RC ret;
+
+    while(currentLevel < this->getTreeHeight()) {
+        ret = nonLeafNode.read(pid, this->pf);
+        if (ret != 0) {
+            if (DEBUG) { printf("INDEX LOCATE DESCENT FAILED DURING NODE READ"); }
+            return ret;
+        }
+        ret = nonLeafNode.locateChildPtr(searchKey, pid);
+        if (ret != 0) {
+            if (DEBUG) { printf("INDEX LOCATE DESCENT FAILED DURING NODE LOCATE"); }
+            return ret;
+        }
+    }
+
+    ret = leafNode.read(pid, this->pf);
+    if (ret != 0) {
+        if (DEBUG) { printf("INDEX LOCATE DESCENT FAILED DURING LEAF NODE READ"); }
+        return ret;
+    }
+
+    cursor.pid = pid;
+    ret = leafNode.locate(searchKey, cursor.eid);
+
+    return ret;
 }
 
 /*
