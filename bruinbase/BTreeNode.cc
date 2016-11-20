@@ -25,8 +25,7 @@ void BTLeafNode::printNode() {
  */
 RC BTLeafNode::read(PageId pid, const PageFile& pf)
 { 
-    pf.read(pid, this->buffer);
-    return 0; 
+    return pf.read(pid, this->buffer);
 }
     
 /*
@@ -37,8 +36,7 @@ RC BTLeafNode::read(PageId pid, const PageFile& pf)
  */
 RC BTLeafNode::write(PageId pid, PageFile& pf)
 { 
-    pf.write(pid, this->buffer); 
-    return 0; 
+    return pf.write(pid, this->buffer); 
 }
 
 /*
@@ -153,7 +151,7 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
 
     setKeyCount(newKeyCount);
     memcpy(&siblingKey, sibling.buffer, sizeof(key));
-
+    //TODO SET THE NEXT NODE PTRS
     return 0; 
 }
 

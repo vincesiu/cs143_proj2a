@@ -153,6 +153,24 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
  */
 RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 {
+    BTLeafNode node;
+
+    if (node.read(cursor.pid, this->pf) != 0) {
+        return RC_INVALID_CURSOR;
+    }
+
+    node.readEntry(cursor.eid, key, rid);
+
+    if (cursor.eid < node.getKeyCount()) {
+        cursor.eid++;
+    } else {
+        cursor.eid = 0;
+        cursor.pid = node.getNextNodePtr();
+        if (cursor.pid == 0) {
+            return RC_END_OF_TREE;
+        }
+    }
+
     return 0;
 }
 
