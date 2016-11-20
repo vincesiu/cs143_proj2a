@@ -18,6 +18,7 @@ using namespace std;
 BTreeIndex::BTreeIndex()
 {
     rootPid = -1;
+    treeHeight = -1;
 }
 
 /*
@@ -31,8 +32,6 @@ RC BTreeIndex::open(const string& indexname, char mode)
 {
     RC __ret = -1; //Used for return cord
     char * buffer[PageFile::PAGE_SIZE]; //used for writing in and out the index metadata
-    int * buffer_int; //used for writing ints to athe "buffer" variable
-
 
     if ( mode == 'r' ) {
         //Will open the file. Errors thrown if the file does not have metadata in page 0
@@ -51,7 +50,8 @@ RC BTreeIndex::open(const string& indexname, char mode)
 
         this->pf.read(0, buffer);
 
-        memcpy((void *) &(this->treeHeight), buffer, sizeof(int));
+        memcpy((void *) &(this->rootPid), buffer, sizeof(int));
+        memcpy((void *) &(this->treeHeight), ((int *) buffer) + 1, sizeof(int));
 
         __ret = 0;
 
@@ -67,11 +67,16 @@ RC BTreeIndex::open(const string& indexname, char mode)
         }
 
         if (this->pf.endPid() == 0) {
-            //Initialize
-            int * buffer_int = (int *) buffer;
-            *buffer_int = 1;
+            //Initialization
+            *((int *) buffer) = 1;
+            *((int *) buffer + 1) = 1;
             this->pf.write(0, buffer);
             this->treeHeight = 1;
+            this->rootPid = 1;
+
+            //Setting first root node
+            memset(buffer, 0, PageFile::PAGE_SIZE);
+            this->pf.write(1, buffer);
         } else {
             this->pf.read(0, buffer);
             memcpy((void *) &(this->treeHeight), buffer, sizeof(int));
@@ -81,7 +86,7 @@ RC BTreeIndex::open(const string& indexname, char mode)
 
     } else {
         //Invalid mode passed in
-        __ret = RC_FILE_OPEN_FAILED;
+        __ret = RC_INVALID_FILE_MODE;
     }
 
     return __ret;
@@ -93,6 +98,13 @@ RC BTreeIndex::open(const string& indexname, char mode)
  */
 RC BTreeIndex::close()
 {
+    if (this->pf.close() != 0) {
+        return RC_FILE_CLOSE_FAILED;
+    }
+
+    rootPid = -1;
+    treeHeight = 0;
+
     return 0;
 }
 
@@ -144,6 +156,28 @@ RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 }
 
 
-RC insertHelper(int key, const RecordId& rid, int treeLevel) {
+PageId BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel) {
+    /*
+PageId BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId) {
+    BTLeafNode leafNode;
+    BTNonLeafNode nonLeafNode;
+
+    if (index.getTreeHeight() == treeLevel) {
+        leafNode.read(
+    }
+    */
     return 0;
+}
+//Debugging function
+////////////////////////////////
+
+
+//Some extra setters for me
+////////////////////////////////
+int BTreeIndex::getRootPid() {
+    return this->rootPid;
+}
+
+int BTreeIndex::getTreeHeight() {
+    return this->treeHeight;
 }

@@ -89,12 +89,16 @@ class BTreeIndex {
   RC readForward(IndexCursor& cursor, int& key, RecordId& rid);
 
   RC insertHelper(int key, const RecordId& rid, int treeLevel);
+
+  int getRootPid();
+  int getTreeHeight();
   
  private:
 
   PageFile pf;         /// the PageFile used to store the actual b+tree in disk
 
-  PageId   rootPid;    /// the PageId of the root node DEFAULT GOING TO BE 1
+  PageId   rootPid;    /// the PageId of the root node DEFAULT GOING TO BE 1, but
+                       ///    will be changed as needed
   int      treeHeight; /// the height of the tree
   /// Note that the content of the above two variables will be gone when
   /// this class is destructed. Make sure to store the values of the two 
