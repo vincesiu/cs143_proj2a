@@ -80,7 +80,8 @@ RC BTreeIndex::open(const string& indexname, char mode)
             this->pf.write(1, buffer);
         } else {
             this->pf.read(0, buffer);
-            memcpy((void *) &(this->treeHeight), buffer, sizeof(int));
+            memcpy((void *) &(this->rootPid), buffer, sizeof(int));
+            memcpy((void *) &(this->treeHeight), ((int *) buffer) + 1, sizeof(int));
         }
 
         __ret = 0;
@@ -236,7 +237,8 @@ void BTreeIndex::debugPrintout() {
     printf("----Start Printout-----\n");
 
     IndexCursor cursor;
-    cursor.pid = 1; //TODO get this guy correctly
+    printf("this is the pid %d\n", pid);
+    cursor.pid = pid;
     cursor.eid = 0;
 
     while (this->readForward(cursor, key, rid) == 0) {

@@ -24,6 +24,8 @@ int main (int argc, char **argv) {
     assert(index.getTreeHeight() == 1);
     assert(index.close() == 0);
     assert(index.open(fileName, 'w') == 0);
+    assert(index.getRootPid() == 1); 
+    assert(index.getTreeHeight() == 1);
 
     printf(" Good!\n");
     index.debugPrintout();
