@@ -56,7 +56,7 @@ int main (int argc, char **argv) {
     assert(index.locate(70, cursor) == RC_NO_SUCH_RECORD);
     printf(" Good!\n");
 
-    printf("Testing advanced insert functionality:");
+    printf("Testing advanced insert functionality (new root creation):");
     rid.pid = 0;
     rid.sid = 70;
     assert(index.insert(70, rid) == 0);
@@ -69,7 +69,17 @@ int main (int argc, char **argv) {
     assert(index.open(fileName, 'w') == 0);
     assert(index.getRootPid() == 3); 
     assert(index.getTreeHeight() == 2);
-    printf(" Good!:\n");
+    printf(" Good!\n");
+
+    printf("Testing advanced insert functionality (inserting into a nonleaf):");
+    for (i = 71; i < 105; i++) {
+        rid.pid = 0;
+        rid.sid = i;
+        assert(index.insert(i, rid) == 0);
+    }
+    index.debugPrintout();
+
+    printf(" Good!\n");
 
 
 

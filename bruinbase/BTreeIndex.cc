@@ -265,13 +265,17 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
     BTNonLeafNode siblingNonLeaf;
 
     RC ret;
-    PageId siblingPid;
+    int childSiblingKey;
+    PageId childSiblingPid;
+    PageId childPid; //this is pid of the node below this one, if this is a nonleaf
+        //and we're trying to find the leaf
 
     if (treeLevel == this->getTreeHeight()) {
         //Inserting into leaf node
         leafNode.read(pid, this->pf);
         ret = leafNode.insert(key, rid);
         if (ret == RC_NODE_FULL) {
+            //Split!
             ret = leafNode.insertAndSplit(key, rid, siblingLeaf, siblingKey);
             retPid = this->pf.endPid();
             leafNode.setNextNodePtr(retPid);
@@ -281,15 +285,31 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
             if (DEBUG) { printf("ERROR IN INSERT HELPER DURING INSERTION\n"); }
             return ret;
         }
+        ret = leafNode.write(pid, this->pf);
+        if (ret != 0) {
+            if (DEBUG) { printf("ERROR IN INSERT HELPER DURING WRITING\n"); }
+            return ret;
+        }
     } else {
         //Traverse down tree, and handle splits as required
+        nonLeafNode.read(pid, this->pf);
+        nonLeafNode.locateChildPtr(key, childPid);
+        childSiblingPid = childPid;
+        ret = insertHelper(key, rid, treeLevel + 1, childPid, childSiblingPid, childSiblingKey);
+
+        /*
+        if (childPid != childSiblingPid) {
+            //Insert!!!
+            ret = nonLeafNode.insert(key, childSiblingPid);
+            if (ret == RC_NODE_FULL) {
+                //Split!!!
+                ret = leafNode.insertAndSplit(
+            }
+
+        }
+        */
     }
 
-    ret = leafNode.write(pid, this->pf);
-    if (ret != 0) {
-        if (DEBUG) { printf("ERROR IN INSERT HELPER DURING WRITING\n"); }
-        return ret;
-    }
     return 0;
 }
 
@@ -317,6 +337,11 @@ void BTreeIndex::debugPrintout() {
 
     while(currentLevel < this->getTreeHeight()) {
         nonLeafNode.read(pid, this->pf);
+        currentLevel++;
+        if (nonLeafNode.getFirstPage(pid) != 0) {
+            if (DEBUG) { printf("ERROR IN DEBUGPRINTOUT WHERE EMPTY NONLEAF NODE REACHED\n"); }
+            return;
+        }
     }
 
     printf("----Start Printout-----\n");
@@ -327,9 +352,13 @@ void BTreeIndex::debugPrintout() {
 
     while (this->readForward(cursor, key, rid) == 0) {
         printf("------------\n");
+        printf("cursor page: %d\n", cursor.pid);
+        printf("cursor eid: %d\n", cursor.eid);
         printf("key:  %d\n", key);
+        /*
         printf("record page id:  %d\n", rid.pid);
         printf("record slot id:  %d\n", rid.sid);
+        */
     }
 
 //RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
