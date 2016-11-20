@@ -56,6 +56,24 @@ int main (int argc, char **argv) {
     assert(index.locate(70, cursor) == RC_NO_SUCH_RECORD);
     printf(" Good!\n");
 
+    printf("Testing advanced insert functionality:");
+    rid.pid = 0;
+    rid.sid = 70;
+    assert(index.insert(70, rid) == 0);
+    assert(index.getRootPid() == 3);
+    assert(index.getTreeHeight() == 2);
+    /*
+    assert(index.locate(70, cursor) == 0);
+    assert(cursor.pid == 2);
+    assert(cursor.eid == 34);
+    assert(index.close() == 0);
+    assert(index.open(fileName, 'w') == 0);
+    assert(index.getRootPid() == 3); 
+    assert(index.getTreeHeight() == 2);
+    */
+    printf(" Good!:\n");
+
+
 
 
     printf("----------------Ending Test--------------------\n");

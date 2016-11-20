@@ -120,6 +120,7 @@ class BTLeafNode {
     * that contains the node.
     */
     char buffer[PageFile::PAGE_SIZE];
+    PageId pid;
 }; 
 
 

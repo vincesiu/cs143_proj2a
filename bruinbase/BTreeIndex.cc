@@ -102,6 +102,12 @@ RC BTreeIndex::open(const string& indexname, char mode)
  */
 RC BTreeIndex::close()
 {
+    //Saving metadata
+    char buffer[PageFile::PAGE_SIZE];
+    *((int *) buffer) = this->rootPid;
+    *((int *) buffer + 1) = this->treeHeight;
+    this->pf.write(0, buffer);
+
     if (this->pf.close() != 0) {
         return RC_FILE_CLOSE_FAILED;
     }
@@ -120,6 +126,23 @@ RC BTreeIndex::close()
  */
 RC BTreeIndex::insert(int key, const RecordId& rid)
 {
+    BTNonLeafNode node;
+    PageId rootPid = this->getRootPid();
+
+    PageId siblingPid = rootPid;
+    int siblingKey;
+
+    RC ret = this->insertHelper(key, rid, 1, rootPid, siblingPid, siblingKey);
+
+    if (siblingPid != rootPid) {
+        this->rootPid = this->pf.endPid();
+        this->treeHeight = this->treeHeight + 1;
+        node.initializeRoot(rootPid, siblingKey, siblingPid);
+        node.write(this->rootPid, this->pf);
+    }
+
+    return ret;
+    /*
     BTLeafNode leafNode;
     PageId pid = 1;
     leafNode.read(pid, this->pf);
@@ -140,6 +163,7 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
         return ret;
     }
     return 0;
+    */
 }
 
 /**
@@ -227,16 +251,44 @@ RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 }
 
 
-PageId BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel) {
-    /*
-PageId BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId) {
+//key: search key
+//rid: record ID to insert
+//treeLevel: level at the tree that we are currently at
+//pid: provided pid of current node we are examining
+//retPid: return pid, pid != ret iff we insert and split
+//ret_key: changed iff insert and split
+RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId pid, PageId& retPid, int& siblingKey) {
     BTLeafNode leafNode;
+    BTLeafNode siblingLeaf;
     BTNonLeafNode nonLeafNode;
+    BTNonLeafNode siblingNonLeaf;
 
-    if (index.getTreeHeight() == treeLevel) {
-        leafNode.read(
+    RC ret;
+    PageId siblingPid;
+
+    if (treeLevel == this->getTreeHeight()) {
+        //Inserting into leaf node
+        leafNode.read(pid, this->pf);
+        ret = leafNode.insert(key, rid);
+        if (ret == RC_NODE_FULL) {
+            ret = leafNode.insertAndSplit(key, rid, siblingLeaf, siblingKey);
+            retPid = this->pf.endPid();
+            leafNode.setNextNodePtr(retPid);
+            siblingLeaf.write(retPid, this->pf);
+        }
+        if (ret != 0) {
+            if (DEBUG) { printf("ERROR IN INSERT HELPER DURING INSERTION\n"); }
+            return ret;
+        }
+    } else {
+        //Traverse down tree, and handle splits as required
     }
-    */
+
+    ret = leafNode.write(pid, this->pf);
+    if (ret != 0) {
+        if (DEBUG) { printf("ERROR IN INSERT HELPER DURING WRITING\n"); }
+        return ret;
+    }
     return 0;
 }
 
@@ -269,7 +321,6 @@ void BTreeIndex::debugPrintout() {
     printf("----Start Printout-----\n");
 
     IndexCursor cursor;
-    printf("this is the pid %d\n", pid);
     cursor.pid = pid;
     cursor.eid = 0;
 

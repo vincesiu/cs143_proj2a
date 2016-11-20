@@ -69,7 +69,7 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
     int keyCount = this->getKeyCount();
     if (keyCount == MAXIMUM_KEY_COUNT) {
         // TODO: error -> node is full
-        return -1;
+        return RC_NODE_FULL;
     }
 
     int eid;
@@ -151,7 +151,9 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
 
     setKeyCount(newKeyCount);
     memcpy(&siblingKey, sibling.buffer, sizeof(key));
-    //TODO SET THE NEXT NODE PTRS
+    //MUST REMEMBER TO SET THE CURRENT NODES NEXT POINTER TO POINT TO SIBLING POINTERS CORRECTLY IN FUNCTIONS 
+    sibling.setNextNodePtr(this->getNextNodePtr());
+
     return 0; 
 }
 
@@ -316,7 +318,7 @@ RC BTNonLeafNode::insert(int key, PageId pid)
 
     if (keyCount == MAXIMUM_KEY_COUNT) {
         // TODO: error -> node is full
-        return -1;
+        return RC_NODE_FULL;
     }
 
     int idx;

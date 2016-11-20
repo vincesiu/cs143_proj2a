@@ -90,7 +90,7 @@ class BTreeIndex {
    */
   RC readForward(IndexCursor& cursor, int& key, RecordId& rid);
 
-  RC insertHelper(int key, const RecordId& rid, int treeLevel);
+  RC insertHelper(int key, const RecordId& rid, int treeLevel, PageId pid, PageId& ret, int& siblingKey);
 
   void debugPrintout();
   int getRootPid();
