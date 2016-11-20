@@ -12,6 +12,7 @@
 
 using namespace std;
 
+
 /*
  * BTreeIndex constructor
  */
@@ -168,11 +169,45 @@ PageId BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, Pag
     */
     return 0;
 }
+
+/*
+TODO REMOVE THIS BOOKMARK
+typedef struct {
+  // PageId of the index entry
+  PageId  pid;  
+  // The entry number inside the node
+  int     eid;  
+} IndexCursor;
+*/
+
 //Debugging function
 ////////////////////////////////
+void BTreeIndex::debugPrintout() {
+
+    int currentLevel = 0;
+    PageId pid = this->getRootPid();
+    int key;
+    BTNonLeafNode nonLeafNode;
+    BTLeafNode leafNode;
 
 
-//Some extra setters for me
+    while(currentLevel < this->getTreeHeight()) {
+        nonLeafNode.read(pid, this->pf);
+        if (nonLeafNode.getFirstPage(pid) != 0) {
+            printf("Empty tree\n");
+            return;
+        }
+    }
+
+    printf("----Start Printout-----\n");
+
+    printf("PageId: %d", pid);
+
+    printf("----End   Printout-----\n");
+}
+
+
+//GETTERS
 ////////////////////////////////
 int BTreeIndex::getRootPid() {
     return this->rootPid;

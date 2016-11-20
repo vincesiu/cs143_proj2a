@@ -13,6 +13,8 @@
 #include "Bruinbase.h"
 #include "PageFile.h"
 #include "RecordFile.h"
+
+#include <cstdio>
              
 /**
  * The data structure to point to a particular entry at a b+tree leaf node.
@@ -90,6 +92,7 @@ class BTreeIndex {
 
   RC insertHelper(int key, const RecordId& rid, int treeLevel);
 
+  void debugPrintout();
   int getRootPid();
   int getTreeHeight();
   

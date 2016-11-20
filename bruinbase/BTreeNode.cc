@@ -460,3 +460,9 @@ RC BTNonLeafNode::initializeRoot(PageId pid1, int key, PageId pid2)
     
     return 0; 
 }
+
+RC BTNonLeafNode::getFirstPage(PageId& pid) {
+    if (this->getKeyCount() == 0) { return RC_NO_SUCH_RECORD; }
+    memcpy(&pid, this->buffer, sizeof(PageId));
+    return 0;
+}

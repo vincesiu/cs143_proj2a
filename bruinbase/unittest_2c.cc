@@ -25,6 +25,7 @@ int main (int argc, char **argv) {
 
     printf(" Good!\n");
     
+    index.debugPrintout();
 
 
     printf("----------------Ending Test--------------------\n");
