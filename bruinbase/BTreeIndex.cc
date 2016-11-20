@@ -205,6 +205,7 @@ RC BTreeIndex::locate(int searchKey, IndexCursor& cursor)
             if (DEBUG) { printf("INDEX LOCATE DESCENT FAILED DURING NODE LOCATE"); }
             return ret;
         }
+        currentLevel++;
     }
 
     ret = leafNode.read(pid, this->pf);

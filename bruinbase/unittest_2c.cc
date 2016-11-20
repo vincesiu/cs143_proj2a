@@ -62,7 +62,6 @@ int main (int argc, char **argv) {
     assert(index.insert(70, rid) == 0);
     assert(index.getRootPid() == 3);
     assert(index.getTreeHeight() == 2);
-    /*
     assert(index.locate(70, cursor) == 0);
     assert(cursor.pid == 2);
     assert(cursor.eid == 34);
@@ -70,7 +69,6 @@ int main (int argc, char **argv) {
     assert(index.open(fileName, 'w') == 0);
     assert(index.getRootPid() == 3); 
     assert(index.getTreeHeight() == 2);
-    */
     printf(" Good!:\n");
 
 
