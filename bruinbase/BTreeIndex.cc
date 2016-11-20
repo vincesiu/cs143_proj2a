@@ -117,6 +117,25 @@ RC BTreeIndex::close()
  */
 RC BTreeIndex::insert(int key, const RecordId& rid)
 {
+    BTLeafNode leafNode;
+    PageId pid = 1;
+    leafNode.read(pid, this->pf);
+    RC ret;
+
+    ret = leafNode.insert(key, rid);
+    //Going to have to handle case of full node
+    if (ret != 0) {
+        return ret;
+    }
+    if (ret == RC_NODE_FULL) {
+        //TODO
+        return -1;
+    }
+
+    ret = leafNode.write(pid, this->pf);
+    if (ret != 0) {
+        return ret;
+    }
     return 0;
 }
 
@@ -202,8 +221,9 @@ typedef struct {
 ////////////////////////////////
 void BTreeIndex::debugPrintout() {
 
-    int currentLevel = 0;
+    int currentLevel = 1;
     PageId pid = this->getRootPid();
+    RecordId rid;
     int key;
     BTNonLeafNode nonLeafNode;
     BTLeafNode leafNode;
@@ -211,16 +231,22 @@ void BTreeIndex::debugPrintout() {
 
     while(currentLevel < this->getTreeHeight()) {
         nonLeafNode.read(pid, this->pf);
-        if (nonLeafNode.getFirstPage(pid) != 0) {
-            printf("Empty tree\n");
-            return;
-        }
     }
 
     printf("----Start Printout-----\n");
 
-    printf("PageId: %d", pid);
+    IndexCursor cursor;
+    cursor.pid = 1; //TODO get this guy correctly
+    cursor.eid = 0;
 
+    while (this->readForward(cursor, key, rid) == 0) {
+        printf("------------\n");
+        printf("key:  %d\n", key);
+        printf("record page id:  %d\n", rid.pid);
+        printf("record slot id:  %d\n", rid.sid);
+    }
+
+//RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
     printf("----End   Printout-----\n");
 }
 
