@@ -137,6 +137,7 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
 
     //Handles updating of rootPid
     if (siblingPid != rootPid) {
+        printf("Updating Root\n");
         this->rootPid = this->pf.endPid();
         this->treeHeight = this->treeHeight + 1;
         node.initializeRoot(rootPid, siblingKey, siblingPid);
@@ -247,7 +248,7 @@ RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 //treeLevel: level at the tree that we are currently at
 //pid: provided pid of current node we are examining
 //retPid: return pid, pid != ret iff we insert and split
-//ret_key: changed iff insert and split
+//retKey: changed iff insert and split
 //This function is SOOO GNARLY. I'll try to fix it, but it's probably not gonna happen
 RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId pid, PageId& retPid, int& retKey) {
     BTLeafNode leafNode;
@@ -295,15 +296,16 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
             ret = nonLeafNode.insert(childSiblingKey, childSiblingPid);
             printf("%d", nonLeafNode.getKeyCount());
             printf("SPLIT AT %d\n", treeLevel);
+
             if (ret == RC_NODE_FULL) {
                 printf("MEGA SPLIT at %d!\n", treeLevel);
                 //Split!!!
-                ret = nonLeafNode.insertAndSplit(childSiblingKey, childSiblingPid, siblingNonLeaf, retKey);
+                nonLeafNode.insertAndSplit(childSiblingKey, childSiblingPid, siblingNonLeaf, retKey);
                 retPid = this->pf.endPid();
                 siblingNonLeaf.write(retPid, this->pf);
             }
-            nonLeafNode.write(retPid, this->pf);
 
+            nonLeafNode.write(pid, this->pf);
         }
     }
 
