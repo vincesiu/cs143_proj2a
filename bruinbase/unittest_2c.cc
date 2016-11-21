@@ -82,8 +82,16 @@ int main (int argc, char **argv) {
 
 
     printf(" Good!\n");
+    printf("Final test:");
+    for (i = 107; i < 2250; i++) {
+        rid.pid = 0;
+        rid.sid = i;
+        assert(index.insert(i, rid) == 0);
+    }
 
 
+    index.debugPrintout();
+    printf(" Good!\n");
 
 
     printf("----------------Ending Test--------------------\n");

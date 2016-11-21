@@ -249,7 +249,7 @@ RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
 //retPid: return pid, pid != ret iff we insert and split
 //ret_key: changed iff insert and split
 //This function is SOOO GNARLY. I'll try to fix it, but it's probably not gonna happen
-RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId pid, PageId& retPid, int& siblingKey) {
+RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId pid, PageId& retPid, int& retKey) {
     BTLeafNode leafNode;
     BTLeafNode siblingLeaf;
     BTNonLeafNode nonLeafNode;
@@ -267,7 +267,7 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
         ret = leafNode.insert(key, rid);
         if (ret == RC_NODE_FULL) {
             //Handling a full leaf node, use insertAndSplit
-            ret = leafNode.insertAndSplit(key, rid, siblingLeaf, siblingKey);
+            ret = leafNode.insertAndSplit(key, rid, siblingLeaf, retKey);
             retPid = this->pf.endPid();
             leafNode.setNextNodePtr(retPid);
             siblingLeaf.write(retPid, this->pf);
@@ -289,17 +289,22 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
         ret = insertHelper(key, rid, treeLevel + 1, childPid, childSiblingPid, childSiblingKey);
 
         //Handling an insertAndSplit lower in the tree
-        /*
         if (childPid != childSiblingPid) {
             //Insert!!!
-            ret = nonLeafNode.insert(key, childSiblingPid);
+            printf("%d", nonLeafNode.getKeyCount());
+            ret = nonLeafNode.insert(childSiblingKey, childSiblingPid);
+            printf("%d", nonLeafNode.getKeyCount());
+            printf("SPLIT AT %d\n", treeLevel);
             if (ret == RC_NODE_FULL) {
+                printf("MEGA SPLIT at %d!\n", treeLevel);
                 //Split!!!
-                ret = leafNode.insertAndSplit(
+                ret = nonLeafNode.insertAndSplit(childSiblingKey, childSiblingPid, siblingNonLeaf, retKey);
+                retPid = this->pf.endPid();
+                siblingNonLeaf.write(retPid, this->pf);
             }
+            nonLeafNode.write(retPid, this->pf);
 
         }
-        */
     }
 
     return 0;
