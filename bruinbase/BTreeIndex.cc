@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define DEBUG 1
+#define DEBUG 0
 
 /*
  * BTreeIndex constructor
@@ -137,7 +137,7 @@ RC BTreeIndex::insert(int key, const RecordId& rid)
 
     //Handles updating of rootPid
     if (siblingPid != rootPid) {
-        printf("Updating Root\n");
+        if (DEBUG) printf("Updating Root\n");
         this->rootPid = this->pf.endPid();
         this->treeHeight = this->treeHeight + 1;
         node.initializeRoot(rootPid, siblingKey, siblingPid);
@@ -292,13 +292,11 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
         //Handling an insertAndSplit lower in the tree
         if (childPid != childSiblingPid) {
             //Insert!!!
-            printf("%d", nonLeafNode.getKeyCount());
             ret = nonLeafNode.insert(childSiblingKey, childSiblingPid);
-            printf("%d", nonLeafNode.getKeyCount());
-            printf("SPLIT AT %d\n", treeLevel);
+            if (DEBUG) printf("SPLIT AT %d\n", treeLevel);
 
             if (ret == RC_NODE_FULL) {
-                printf("MEGA SPLIT at %d!\n", treeLevel);
+                if (DEBUG) printf("MEGA SPLIT at %d!\n", treeLevel);
                 //Split!!!
                 nonLeafNode.insertAndSplit(childSiblingKey, childSiblingPid, siblingNonLeaf, retKey);
                 retPid = this->pf.endPid();

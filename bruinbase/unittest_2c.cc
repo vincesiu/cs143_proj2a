@@ -4,6 +4,7 @@
 
 #include "BTreeIndex.h"
 
+#define DEBUGPRINTOUT 0
 int main (int argc, char **argv) {
     //Random variables
     IndexCursor cursor;
@@ -32,7 +33,7 @@ int main (int argc, char **argv) {
     assert(index.getTreeHeight() == 1);
 
     printf(" Good!\n");
-    index.debugPrintout();
+    if (DEBUGPRINTOUT) index.debugPrintout();
 
     printf("Testing basic insert functionality:");
 
@@ -43,7 +44,7 @@ int main (int argc, char **argv) {
     }
 
     printf(" Good!\n");
-    index.debugPrintout();
+    if (DEBUGPRINTOUT) index.debugPrintout();
 
 
     printf("Testing basic search functionality:");
@@ -78,7 +79,7 @@ int main (int argc, char **argv) {
         assert(index.insert(i, rid) == 0);
     }
 
-    index.debugPrintout();
+    if (DEBUGPRINTOUT) index.debugPrintout();
 
 
     printf(" Good!\n");
@@ -91,7 +92,13 @@ int main (int argc, char **argv) {
     }
 
 
-    index.debugPrintout();
+    assert(index.locate(0, cursor) == 0);
+    assert(index.locate(1000, cursor) == 0);
+    assert(index.locate(2000, cursor) == 0);
+    assert(index.locate(2999, cursor) == 0);
+    assert(index.locate(3000, cursor) == RC_NO_SUCH_RECORD);
+
+    if (DEBUGPRINTOUT) index.debugPrintout();
     printf(" Good!\n");
 
 
