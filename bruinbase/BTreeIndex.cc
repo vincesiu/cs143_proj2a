@@ -230,16 +230,20 @@ RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
     if (node.readEntry(cursor.eid, key, rid) != 0) {
         cursor.eid = 0;
         cursor.pid = node.getNextNodePtr();
+
         return readForward(cursor, key, rid);
     }
 
     //Setting next cursor
+    cursor.eid++;
+    /*
     if (cursor.eid < node.getKeyCount() - 1) {
         cursor.eid++;
     } else {
         cursor.eid = 0;
         cursor.pid = node.getNextNodePtr();
     }
+    */
 
     return 0;
 }
@@ -271,15 +275,17 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
         leafNode.read(pid, this->pf);
         if (DEBUG) printf("INDEX INSERT: LEAF NEXT PID OF %d\n", leafNode.getNextNodePtr());
         ret = leafNode.insert(key, rid);
-        if (DEBUG) printf("INDEX INSERT: LEAF NEXT PID OF %d\n", leafNode.getNextNodePtr());
         if (ret == RC_NODE_FULL) {
             //Handling a full leaf node, use insertAndSplit
+            if (DEBUG) printf("INDEX INSERT: LEAF NEXT PID OF %d\n", leafNode.getNextNodePtr());
             ret = leafNode.insertAndSplit(key, rid, siblingLeaf, retKey);
+            if (DEBUG) printf("INDEX INSERT: LEAF NEXT PID OF %d\n", leafNode.getNextNodePtr());
             retPid = this->pf.endPid();
+            if (DEBUG) printf("INDEX INSERT: LEAF NEXT PID OF %d\n", leafNode.getNextNodePtr());
             leafNode.setNextNodePtr(retPid);
             siblingLeaf.write(retPid, this->pf);
-            if (DEBUG) printf("INDEX INSERT: SPLIT AT LEAF, ORIGINAL PID OF %d\n", leafNode.getNextNodePtr());
-            if (DEBUG) printf("INDEX INSERT: SPLIT AT LEAF, SIBLING PID OF %d\n", siblingLeaf.getNextNodePtr());
+            if (DEBUG) printf("INDEX INSERT: SPLIT AT LEAF, ORIGINAL NEXT PID OF %d\n", leafNode.getNextNodePtr());
+            if (DEBUG) printf("INDEX INSERT: SPLIT AT LEAF, SIBLING NEXT PID OF %d\n", siblingLeaf.getNextNodePtr());
         }
         if (ret != 0) {
             if (DEBUG) { printf("ERROR IN INSERT HELPER DURING INSERTION\n"); }

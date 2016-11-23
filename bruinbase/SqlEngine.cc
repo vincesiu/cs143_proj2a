@@ -97,24 +97,8 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
       for (unsigned i = 0; i < cond.size(); i++) {
           searchVal = atoi(cond[i].value);
           switch(cond[i].comp) {
-              case SelCond::LT:
-                if (searchLower && searchVal >= searchLowerBound) {
-                    searchLowerBound = searchVal - 1;
-                } else {
-                    searchLower = true;
-                    searchLowerBound = searchVal - 1;
-                }
-                break;
-              case SelCond::LE:
-                if (searchLower && searchVal > searchLowerBound) {
-                    searchLowerBound = searchVal;
-                } else {
-                    searchLower = true;
-                    searchLowerBound = searchVal;
-                }
-                break;
               case SelCond::GT:
-                if (searchLower && searchVal <= searchLowerBound) {
+                if (searchLower && searchVal >= searchLowerBound) {
                     searchLowerBound = searchVal + 1;
                 } else {
                     searchLower = true;
@@ -122,11 +106,27 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
                 }
                 break;
               case SelCond::GE:
-                if (searchLower && searchVal < searchLowerBound) {
+                if (searchLower && searchVal > searchLowerBound) {
                     searchLowerBound = searchVal;
                 } else {
                     searchLower = true;
                     searchLowerBound = searchVal;
+                }
+                break;
+              case SelCond::LT:
+                if (searchUpper && searchVal <= searchUpperBound) {
+                    searchUpperBound = searchVal - 1;
+                } else {
+                    searchUpper = true;
+                    searchUpperBound = searchVal - 1;
+                }
+                break;
+              case SelCond::LE:
+                if (searchUpper && searchVal < searchUpperBound) {
+                    searchUpperBound = searchVal;
+                } else {
+                    searchUpper = true;
+                    searchUpperBound = searchVal;
                 }
                 break;
 
@@ -180,6 +180,25 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
             if (DEBUG) fprintf(stdout, "lower bound %d\n", searchLowerBound);
             if (DEBUG) fprintf(stdout, "upper bound %d\n", searchUpperBound);
           // find lower bound and go to upper bound
+            index.locate(searchLowerBound, cursor);
+            RC ret;
+            while(index.readForward(cursor, key, rid) == 0) {
+              if (key > searchUpperBound) {
+                  break;
+              }
+              rf.read(rid, key, value);
+              switch (attr) {
+                  case 1:  // SELECT key
+                      fprintf(stdout, "%d\n", key);
+                      break;
+                  case 2:  // SELECT value
+                      fprintf(stdout, "%s\n", value.c_str());
+                      break;
+                  case 3:  // SELECT *
+                      fprintf(stdout, "%d '%s'\n", key, value.c_str());
+                      break;
+              }
+            }
       }
 
       //Locate algorithm

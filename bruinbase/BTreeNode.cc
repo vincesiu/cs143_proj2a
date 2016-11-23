@@ -119,6 +119,7 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
 { 
     int keyCount = getKeyCount();
     int eid;
+    PageId pid = this->getNextNodePtr();
 
     RC returncode = this->locate(key, eid);
 
@@ -154,7 +155,8 @@ RC BTLeafNode::insertAndSplit(int key, const RecordId& rid,
     setKeyCount(newKeyCount);
     memcpy(&siblingKey, sibling.buffer, sizeof(key));
     //MUST REMEMBER TO SET THE CURRENT NODES NEXT POINTER TO POINT TO SIBLING POINTERS CORRECTLY IN FUNCTIONS 
-    sibling.setNextNodePtr(this->getNextNodePtr());
+    sibling.setNextNodePtr(pid);
+    this->setNextNodePtr(pid);
 
     return 0; 
 }
