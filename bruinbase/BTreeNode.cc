@@ -67,6 +67,7 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
 { 
     //TODO
     int keyCount = this->getKeyCount();
+    PageId pid = this->getNextNodePtr();
     if (keyCount == MAXIMUM_KEY_COUNT) {
         // TODO: error -> node is full
         return RC_NODE_FULL;
@@ -98,7 +99,8 @@ RC BTLeafNode::insert(int key, const RecordId& rid)
     memcpy(buffer + ((eid + 1) * 12), tempbuffer, sizeToCopy);
 
     // adjust key count
-    setKeyCount(keyCount + 1);
+    this->setKeyCount(keyCount + 1);
+    this->setNextNodePtr(pid);
     return 0; 
 }
 

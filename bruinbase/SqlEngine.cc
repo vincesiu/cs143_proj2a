@@ -90,7 +90,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
   if (indexUse) {
       // So far, no test cases which have both locates and ranges
       // I guess they're mutually exclusive?
-//following errors out
+// following errors out
 //      index.debugPrintout();
 
       // Range algorithm

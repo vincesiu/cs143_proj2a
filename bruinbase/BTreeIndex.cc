@@ -12,7 +12,7 @@
 
 using namespace std;
 
-#define DEBUG 0
+#define DEBUG false
 
 /*
  * BTreeIndex constructor
@@ -266,19 +266,26 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
 
     if (treeLevel == this->getTreeHeight()) {
         //Inserting into leaf node
+
+
         leafNode.read(pid, this->pf);
+        if (DEBUG) printf("INDEX INSERT: LEAF NEXT PID OF %d\n", leafNode.getNextNodePtr());
         ret = leafNode.insert(key, rid);
+        if (DEBUG) printf("INDEX INSERT: LEAF NEXT PID OF %d\n", leafNode.getNextNodePtr());
         if (ret == RC_NODE_FULL) {
             //Handling a full leaf node, use insertAndSplit
             ret = leafNode.insertAndSplit(key, rid, siblingLeaf, retKey);
             retPid = this->pf.endPid();
             leafNode.setNextNodePtr(retPid);
             siblingLeaf.write(retPid, this->pf);
+            if (DEBUG) printf("INDEX INSERT: SPLIT AT LEAF, ORIGINAL PID OF %d\n", leafNode.getNextNodePtr());
+            if (DEBUG) printf("INDEX INSERT: SPLIT AT LEAF, SIBLING PID OF %d\n", siblingLeaf.getNextNodePtr());
         }
         if (ret != 0) {
             if (DEBUG) { printf("ERROR IN INSERT HELPER DURING INSERTION\n"); }
             return ret;
         }
+        if (DEBUG) printf("INSERT AT LEAF, ORIGINAL PID OF %d\n", leafNode.getNextNodePtr());
         ret = leafNode.write(pid, this->pf);
         if (ret != 0) {
             if (DEBUG) { printf("ERROR IN INSERT HELPER DURING WRITING\n"); }
@@ -309,8 +316,6 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
         }
     }
 
-    fprintf(stdout, "keycount: %d", leafNode.getKeyCount());
-    this->debugPrintout();
 
     return 0;
 }
