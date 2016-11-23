@@ -18,7 +18,7 @@
 #include <string>
 #include "BTreeIndex.h"
 
-#define DEBUG 1
+#define DEBUG false
 
 using namespace std;
 
@@ -90,8 +90,9 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
   if (indexUse) {
       // So far, no test cases which have both locates and ranges
       // I guess they're mutually exclusive?
-// following errors out
-//      index.debugPrintout();
+
+      //Count(*) algorithm
+      count = 0;
 
       // Range algorithm
       for (unsigned i = 0; i < cond.size(); i++) {
@@ -100,7 +101,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
               case SelCond::GT:
                 if (searchLower && searchVal >= searchLowerBound) {
                     searchLowerBound = searchVal + 1;
-                } else {
+                } else if (!searchLower) {
                     searchLower = true;
                     searchLowerBound = searchVal + 1;
                 }
@@ -108,7 +109,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
               case SelCond::GE:
                 if (searchLower && searchVal > searchLowerBound) {
                     searchLowerBound = searchVal;
-                } else {
+                } else if (!searchLower)  {
                     searchLower = true;
                     searchLowerBound = searchVal;
                 }
@@ -116,7 +117,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
               case SelCond::LT:
                 if (searchUpper && searchVal <= searchUpperBound) {
                     searchUpperBound = searchVal - 1;
-                } else {
+                } else if (!searchUpper) {
                     searchUpper = true;
                     searchUpperBound = searchVal - 1;
                 }
@@ -124,7 +125,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
               case SelCond::LE:
                 if (searchUpper && searchVal < searchUpperBound) {
                     searchUpperBound = searchVal;
-                } else {
+                } else if (!searchUpper) {
                     searchUpper = true;
                     searchUpperBound = searchVal;
                 }
@@ -139,7 +140,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
             index.locate(searchLowerBound, cursor);
             RC ret;
             while((ret = index.readForward(cursor, key, rid)) == 0) {
-              fprintf(stdout, "ret: %d", ret);
+              count++;
               rf.read(rid, key, value);
               switch (attr) {
                   case 1:  // SELECT key
@@ -153,7 +154,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
                       break;
               }
             }
-              fprintf(stdout, "ret: %d", ret);
+              if (DEBUG) fprintf(stdout, "ret: %d", ret);
       } else if (!searchLower && searchUpper) {
           // upper bound, find lowest item and go to upper bound
             if (DEBUG) fprintf(stdout, "upper bound %d\n", searchUpperBound);
@@ -163,6 +164,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
               if (key > searchUpperBound) {
                   break;
               }
+              count++;
               rf.read(rid, key, value);
               switch (attr) {
                   case 1:  // SELECT key
@@ -186,6 +188,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
               if (key > searchUpperBound) {
                   break;
               }
+              count++;
               rf.read(rid, key, value);
               switch (attr) {
                   case 1:  // SELECT key
@@ -206,6 +209,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
           if (cond[i].comp == SelCond::EQ) {
               searchVal = atoi(cond[i].value);
               if (index.locate(searchVal, cursor) == 0) {
+                  count++;
                   index.readForward(cursor, key, rid);
                   rf.read(rid, key, value);
                   switch (attr) {
@@ -222,6 +226,18 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
               }
           }
       }
+
+      if (attr == 4) {
+          if (cond.size() == 0) {
+              index.getFirstElement(cursor);
+              while(index.readForward(cursor, key, rid) == 0) {
+                  count++;
+              }
+          }
+          fprintf(stdout, "%d\n", count);
+      }
+
+
 
     goto exit_select;
   }
