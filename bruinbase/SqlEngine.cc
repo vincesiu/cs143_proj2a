@@ -42,6 +42,9 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
   RecordFile rf;   // RecordFile containing the table
   RecordId   rid;  // record cursor for table scanning
 
+  BTreeIndex index;
+  IndexCursor cursor;
+  bool indexValid = false;
   RC     rc;
   int    key;     
   string value;
@@ -54,6 +57,35 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
     return rc;
   }
 
+
+  // attempt to open the index file
+  if (index.open(table + ".idx", 'r') == 0) {
+      fprintf(stdout, "Success opening index file\n");
+      indexValid = true;
+  }
+
+
+  //Mine
+  //RecordId.pid pageid
+  //RecordId.sid slot in the page
+  if (indexValid && (cond.size() == 1) && (cond[0].comp == SelCond::EQ)) {
+      index.locate(atoi(cond[0].value), cursor);
+      index.readForward(cursor, key, rid);
+      rf.read(rid, key, value);
+      fprintf(stdout, "Hello world\n");
+    switch (attr) {
+    case 1:  // SELECT key
+      fprintf(stdout, "%d\n", key);
+      break;
+    case 2:  // SELECT value
+      fprintf(stdout, "%s\n", value.c_str());
+      break;
+    case 3:  // SELECT *
+      fprintf(stdout, "%d '%s'\n", key, value.c_str());
+      break;
+    }
+
+  }
   // scan the table file from the beginning
   rid.pid = rid.sid = 0;
   count = 0;
@@ -130,6 +162,9 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
   // close the table file and return
   exit_select:
   rf.close();
+  if (indexValid) {
+      index.close();
+  }
   return rc;
 }
 
