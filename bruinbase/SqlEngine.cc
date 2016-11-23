@@ -90,7 +90,8 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
   if (indexUse) {
       // So far, no test cases which have both locates and ranges
       // I guess they're mutually exclusive?
-      index.debugPrintout();
+//following errors out
+//      index.debugPrintout();
 
       // Range algorithm
       for (unsigned i = 0; i < cond.size(); i++) {
@@ -136,7 +137,9 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
           // lower bound, find lower bound and go up 
             if (DEBUG) fprintf(stdout, "lower bound %d\n", searchLowerBound);
             index.locate(searchLowerBound, cursor);
-            while(index.readForward(cursor, key, rid) == 0) {
+            RC ret;
+            while((ret = index.readForward(cursor, key, rid)) == 0) {
+              fprintf(stdout, "ret: %d", ret);
               rf.read(rid, key, value);
               switch (attr) {
                   case 1:  // SELECT key
@@ -150,6 +153,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
                       break;
               }
             }
+              fprintf(stdout, "ret: %d", ret);
       } else if (!searchLower && searchUpper) {
           // upper bound, find lowest item and go to upper bound
             if (DEBUG) fprintf(stdout, "upper bound %d\n", searchUpperBound);
@@ -182,19 +186,20 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
       for (unsigned i = 0; i < cond.size(); i++) {
           if (cond[i].comp == SelCond::EQ) {
               searchVal = atoi(cond[i].value);
-              index.locate(searchVal, cursor);
-              index.readForward(cursor, key, rid);
-              rf.read(rid, key, value);
-              switch (attr) {
-                  case 1:  // SELECT key
-                      fprintf(stdout, "%d\n", key);
-                      break;
-                  case 2:  // SELECT value
-                      fprintf(stdout, "%s\n", value.c_str());
-                      break;
-                  case 3:  // SELECT *
-                      fprintf(stdout, "%d '%s'\n", key, value.c_str());
-                      break;
+              if (index.locate(searchVal, cursor) == 0) {
+                  index.readForward(cursor, key, rid);
+                  rf.read(rid, key, value);
+                  switch (attr) {
+                      case 1:  // SELECT key
+                          fprintf(stdout, "%d\n", key);
+                          break;
+                      case 2:  // SELECT value
+                          fprintf(stdout, "%s\n", value.c_str());
+                          break;
+                      case 3:  // SELECT *
+                          fprintf(stdout, "%d '%s'\n", key, value.c_str());
+                          break;
+                  }
               }
           }
       }
@@ -296,7 +301,6 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
   BTreeIndex btree;
 
 
-
   //Create index if needed
   if (index) {
       //Check if the file exists, aborting? or overwrite?
@@ -315,7 +319,9 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
           SqlEngine::parseLoadLine(input_line, key, value);
           out->append(key, value, rid);
           if (index) {
-              btree.insert(key, rid);
+              if (btree.insert(key, rid) != 0) {
+                  fprintf(stdout, "ERROR CREATING INDEX");
+              }
           }
   }
 

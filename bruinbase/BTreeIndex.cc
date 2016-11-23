@@ -228,7 +228,9 @@ RC BTreeIndex::readForward(IndexCursor& cursor, int& key, RecordId& rid)
     }
 
     if (node.readEntry(cursor.eid, key, rid) != 0) {
-        return RC_INVALID_CURSOR;
+        cursor.eid = 0;
+        cursor.pid = node.getNextNodePtr();
+        return readForward(cursor, key, rid);
     }
 
     //Setting next cursor
@@ -306,6 +308,9 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
             nonLeafNode.write(pid, this->pf);
         }
     }
+
+    fprintf(stdout, "keycount: %d", leafNode.getKeyCount());
+    this->debugPrintout();
 
     return 0;
 }

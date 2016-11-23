@@ -208,7 +208,7 @@ RC BTLeafNode::locate(int searchKey, int& eid)
 RC BTLeafNode::readEntry(int eid, int& key, RecordId& rid)
 { 
     int keyCount = this->getKeyCount();
-    if (eid > keyCount) return -1;
+    if (eid >= keyCount) return -1;
 
     memcpy(&key, buffer + (eid * 12), sizeof(key));
     memcpy(&rid.pid, buffer + (eid * 12) + 4, sizeof(rid.pid));

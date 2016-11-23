@@ -4,7 +4,7 @@
 
 #include "BTreeIndex.h"
 
-#define DEBUGPRINTOUT 0
+#define DEBUGPRINTOUT true
 int main (int argc, char **argv) {
     //Random variables
     IndexCursor cursor;
@@ -85,18 +85,20 @@ int main (int argc, char **argv) {
     printf(" Good!\n");
     printf("Final test:");
 
-    for (i = 107; i < 3000; i++) {
+    for (i = 107; i < 3500; i++) {
         rid.pid = 0;
         rid.sid = i;
         assert(index.insert(i, rid) == 0);
     }
 
+    assert(index.close() == 0);
+    assert(index.open(fileName, 'r') == 0);
 
     assert(index.locate(0, cursor) == 0);
     assert(index.locate(1000, cursor) == 0);
     assert(index.locate(2000, cursor) == 0);
     assert(index.locate(2999, cursor) == 0);
-    assert(index.locate(3000, cursor) == RC_NO_SUCH_RECORD);
+    assert(index.locate(3500, cursor) == RC_NO_SUCH_RECORD);
 
     if (DEBUGPRINTOUT) index.debugPrintout();
     printf(" Good!\n");
