@@ -16,6 +16,7 @@
 #include "SqlEngine.h"
 
 #include <string>
+#include "BTreeIndex.h"
 
 using namespace std;
 
@@ -135,6 +136,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
 RC SqlEngine::load(const string& table, const string& loadfile, bool index)
 {
   /* your code here */
+
   //input data file
   std::ifstream input;
   std::string input_line;
@@ -143,7 +145,21 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
   //output data file
   RecordFile * out = new RecordFile(table + ".tbl", 'w');
 
+  //Index data structures
+  BTreeIndex btree;
 
+
+
+  //Create index if needed
+  if (index) {
+      //Check if the file exists, aborting? or overwrite?
+      //TODO
+        
+      if (btree.open(table + ".idx", 'w') != 0) {
+          //Error checking, abort
+          //TODO
+      }
+  }
 
   while(std::getline(input, input_line)) {
           RecordId rid;
@@ -151,9 +167,16 @@ RC SqlEngine::load(const string& table, const string& loadfile, bool index)
           std::string value;
           SqlEngine::parseLoadLine(input_line, key, value);
           out->append(key, value, rid);
+          if (index) {
+              btree.insert(key, rid);
+          }
   }
 
 
+  if (index) {
+      //Error checking needed? Probably nah
+      btree.close();
+  }
 
   input.close();
   out->close();
