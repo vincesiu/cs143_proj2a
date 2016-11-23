@@ -18,6 +18,8 @@
 #include <string>
 #include "BTreeIndex.h"
 
+#define DEBUG 1
+
 using namespace std;
 
 // external functions and variables for load file and sql command parsing 
@@ -42,14 +44,21 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
   RecordFile rf;   // RecordFile containing the table
   RecordId   rid;  // record cursor for table scanning
 
-  BTreeIndex index;
-  IndexCursor cursor;
-  bool indexValid = false;
   RC     rc;
   int    key;     
   string value;
   int    count;
   int    diff;
+
+  // Index Variables
+  BTreeIndex index;
+  bool indexUse = false;
+  IndexCursor cursor;
+  bool searchLower = false;
+  bool searchUpper = false;
+  int searchLowerBound;
+  int searchUpperBound;
+  int searchVal;
 
   // open the table file
   if ((rc = rf.open(table + ".tbl", 'r')) < 0) {
@@ -60,31 +69,137 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
 
   // attempt to open the index file
   if (index.open(table + ".idx", 'r') == 0) {
-      fprintf(stdout, "Success opening index file\n");
-      indexValid = true;
+      if (DEBUG) fprintf(stdout, "Success opening index file\n");
+      indexUse = true; 
+      for (unsigned i = 0; i < cond.size(); i++) {
+          // Don't use index if any are invalid
+          if ((cond[i].comp == SelCond::NE) || (cond[i].attr == 2)) {
+              if (DEBUG) fprintf(stdout, "Inappropriate conditions for using index");
+              index.close();
+              indexUse = false;
+              break;
+          }
+      }
   }
 
 
-  //Mine
-  //RecordId.pid pageid
-  //RecordId.sid slot in the page
-  if (indexValid && (cond.size() == 1) && (cond[0].comp == SelCond::EQ)) {
-      index.locate(atoi(cond[0].value), cursor);
-      index.readForward(cursor, key, rid);
-      rf.read(rid, key, value);
-      fprintf(stdout, "Hello world\n");
-    switch (attr) {
-    case 1:  // SELECT key
-      fprintf(stdout, "%d\n", key);
-      break;
-    case 2:  // SELECT value
-      fprintf(stdout, "%s\n", value.c_str());
-      break;
-    case 3:  // SELECT *
-      fprintf(stdout, "%d '%s'\n", key, value.c_str());
-      break;
-    }
+  // My code
+  // RecordId struct:
+  // RecordId.pid pageid
+  // RecordId.sid slot in the page
+  if (indexUse) {
+      // So far, no test cases which have both locates and ranges
+      // I guess they're mutually exclusive?
+      index.debugPrintout();
 
+      // Range algorithm
+      for (unsigned i = 0; i < cond.size(); i++) {
+          searchVal = atoi(cond[i].value);
+          switch(cond[i].comp) {
+              case SelCond::LT:
+                if (searchLower && searchVal >= searchLowerBound) {
+                    searchLowerBound = searchVal - 1;
+                } else {
+                    searchLower = true;
+                    searchLowerBound = searchVal - 1;
+                }
+                break;
+              case SelCond::LE:
+                if (searchLower && searchVal > searchLowerBound) {
+                    searchLowerBound = searchVal;
+                } else {
+                    searchLower = true;
+                    searchLowerBound = searchVal;
+                }
+                break;
+              case SelCond::GT:
+                if (searchLower && searchVal <= searchLowerBound) {
+                    searchLowerBound = searchVal + 1;
+                } else {
+                    searchLower = true;
+                    searchLowerBound = searchVal + 1;
+                }
+                break;
+              case SelCond::GE:
+                if (searchLower && searchVal < searchLowerBound) {
+                    searchLowerBound = searchVal;
+                } else {
+                    searchLower = true;
+                    searchLowerBound = searchVal;
+                }
+                break;
+
+          }
+      }
+
+      if (searchLower && !searchUpper) {
+          // lower bound, find lower bound and go up 
+            if (DEBUG) fprintf(stdout, "lower bound %d\n", searchLowerBound);
+            index.locate(searchLowerBound, cursor);
+            while(index.readForward(cursor, key, rid) == 0) {
+              rf.read(rid, key, value);
+              switch (attr) {
+                  case 1:  // SELECT key
+                      fprintf(stdout, "%d\n", key);
+                      break;
+                  case 2:  // SELECT value
+                      fprintf(stdout, "%s\n", value.c_str());
+                      break;
+                  case 3:  // SELECT *
+                      fprintf(stdout, "%d '%s'\n", key, value.c_str());
+                      break;
+              }
+            }
+      } else if (!searchLower && searchUpper) {
+          // upper bound, find lowest item and go to upper bound
+            if (DEBUG) fprintf(stdout, "upper bound %d\n", searchUpperBound);
+
+            index.getFirstElement(cursor);
+            while(index.readForward(cursor, key, rid) == 0) {
+              if (key > searchUpperBound) {
+                  break;
+              }
+              rf.read(rid, key, value);
+              switch (attr) {
+                  case 1:  // SELECT key
+                      fprintf(stdout, "%d\n", key);
+                      break;
+                  case 2:  // SELECT value
+                      fprintf(stdout, "%s\n", value.c_str());
+                      break;
+                  case 3:  // SELECT *
+                      fprintf(stdout, "%d '%s'\n", key, value.c_str());
+                      break;
+              }
+            }
+      } else if (searchLower && searchUpper) {
+            if (DEBUG) fprintf(stdout, "lower bound %d\n", searchLowerBound);
+            if (DEBUG) fprintf(stdout, "upper bound %d\n", searchUpperBound);
+          // find lower bound and go to upper bound
+      }
+
+      //Locate algorithm
+      for (unsigned i = 0; i < cond.size(); i++) {
+          if (cond[i].comp == SelCond::EQ) {
+              searchVal = atoi(cond[i].value);
+              index.locate(searchVal, cursor);
+              index.readForward(cursor, key, rid);
+              rf.read(rid, key, value);
+              switch (attr) {
+                  case 1:  // SELECT key
+                      fprintf(stdout, "%d\n", key);
+                      break;
+                  case 2:  // SELECT value
+                      fprintf(stdout, "%s\n", value.c_str());
+                      break;
+                  case 3:  // SELECT *
+                      fprintf(stdout, "%d '%s'\n", key, value.c_str());
+                      break;
+              }
+          }
+      }
+
+    goto exit_select;
   }
   // scan the table file from the beginning
   rid.pid = rid.sid = 0;
@@ -162,9 +277,6 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
   // close the table file and return
   exit_select:
   rf.close();
-  if (indexValid) {
-      index.close();
-  }
   return rc;
 }
 

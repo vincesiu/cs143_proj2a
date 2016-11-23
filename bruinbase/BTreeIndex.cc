@@ -310,6 +310,26 @@ RC BTreeIndex::insertHelper(int key, const RecordId& rid, int treeLevel, PageId 
     return 0;
 }
 
+RC BTreeIndex::getFirstElement(IndexCursor& cursor) {
+    BTNonLeafNode nonLeafNode;
+    PageId pid = this->getRootPid();
+    int currentLevel = 1;
+
+    while(currentLevel < this->getTreeHeight()) {
+        nonLeafNode.read(pid, this->pf);
+        currentLevel++;
+        if (nonLeafNode.getFirstPage(pid) != 0) {
+            if (DEBUG) { printf("ERROR IN DEBUGPRINTOUT WHERE EMPTY NONLEAF NODE REACHED\n"); }
+            return -1;
+        }
+    }
+
+    cursor.pid = pid;
+    cursor.eid = 0;
+
+    return 0;
+}
+
 //Debugging function
 ////////////////////////////////
 void BTreeIndex::debugPrintout() {

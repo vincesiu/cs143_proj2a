@@ -92,6 +92,8 @@ class BTreeIndex {
 
   RC insertHelper(int key, const RecordId& rid, int treeLevel, PageId pid, PageId& ret, int& siblingKey);
 
+  RC getFirstElement(IndexCursor& cursor);
+
   void debugPrintout();
   int getRootPid();
   int getTreeHeight();
