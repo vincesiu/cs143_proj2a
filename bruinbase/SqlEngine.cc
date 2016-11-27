@@ -123,6 +123,7 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
           temp = atoi(cond[i].value);
           if (cond[i].attr == 2) {
               readValues = true;
+              continue;
           }
           switch(cond[i].comp) {
               case SelCond::EQ:
