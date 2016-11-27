@@ -54,11 +54,15 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
   BTreeIndex index;
   bool indexUse = false;
   IndexCursor cursor;
+  bool needsValue = false;
   bool searchLower = false;
   bool searchUpper = false;
+  bool searchLocate = false;
   int searchLowerBound;
   int searchUpperBound;
-  int searchVal;
+  int searchVal; // This is for holding locate search values
+  int temp;
+  bool readValues = false; // This is true if requires reading in values from table
 
   // open the table file
   if ((rc = rf.open(table + ".tbl", 'r')) < 0) {
@@ -67,172 +71,226 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
   }
 
 
-  // attempt to open the index file
+  // attempt to open the index file, and checks if it's used
   if (index.open(table + ".idx", 'r') == 0) {
       if (DEBUG) fprintf(stdout, "Success opening index file\n");
-      indexUse = true; 
+
+      
+      //Case of everything else
       for (unsigned i = 0; i < cond.size(); i++) {
           // Don't use index if any are invalid
-          if ((cond[i].comp == SelCond::NE) || (cond[i].attr == 2)) {
-              if (DEBUG) fprintf(stdout, "Inappropriate conditions for using index");
-              index.close();
-              indexUse = false;
+          if (DEBUG) fprintf(stdout, "Search Comparison code %d\n", cond[i].comp);
+          if (DEBUG) fprintf(stdout, "Search Attribute code %d\n", cond[i].attr);
+
+          if ((cond[i].comp != SelCond::NE) && (cond[i].attr == 1)) {
+              if (DEBUG) fprintf(stdout, "Appropriate Conditions for using index");
+              indexUse = true;
               break;
           }
+      }
+
+      //Case of count(*) 
+      if (DEBUG) fprintf(stdout, "Condition size %d\n", cond.size());
+      if (DEBUG) fprintf(stdout, "Output Attribute code %d\n", attr);
+      if ((attr == 4) && cond.size() == 0) {
+          if (DEBUG) fprintf(stdout, "Appropriate Conditions for using index");
+          indexUse = true;
+      }
+
+      if (indexUse == false) {
+          index.close();
       }
   }
 
 
-  // My code
+  // My code for index usage
   // RecordId struct:
   // RecordId.pid pageid
   // RecordId.sid slot in the page
   if (indexUse) {
-      // So far, no test cases which have both locates and ranges
-      // I guess they're mutually exclusive?
 
-      //Count(*) algorithm
+      //Count(*) initialization
       count = 0;
 
-      // Range algorithm
+      if ((attr == 2) || (attr == 3)) {
+          readValues = true;
+      }
+
+      // Range Calculation
+      // Also finds if locate query is there
+      // Also checks if readValues is needed
       for (unsigned i = 0; i < cond.size(); i++) {
-          searchVal = atoi(cond[i].value);
+          temp = atoi(cond[i].value);
+          if (cond[i].attr == 2) {
+              readValues = true;
+          }
           switch(cond[i].comp) {
+              case SelCond::EQ:
+                  searchLocate = true;
+                  searchVal = temp;
+                break;
               case SelCond::GT:
-                if (searchLower && searchVal >= searchLowerBound) {
-                    searchLowerBound = searchVal + 1;
+                if (searchLower && temp >= searchLowerBound) {
+                    searchLowerBound = temp + 1;
                 } else if (!searchLower) {
                     searchLower = true;
-                    searchLowerBound = searchVal + 1;
+                    searchLowerBound = temp + 1;
                 }
                 break;
               case SelCond::GE:
-                if (searchLower && searchVal > searchLowerBound) {
-                    searchLowerBound = searchVal;
+                if (searchLower && temp > searchLowerBound) {
+                    searchLowerBound = temp;
                 } else if (!searchLower)  {
                     searchLower = true;
-                    searchLowerBound = searchVal;
+                    searchLowerBound = temp;
                 }
                 break;
               case SelCond::LT:
-                if (searchUpper && searchVal <= searchUpperBound) {
-                    searchUpperBound = searchVal - 1;
+                if (searchUpper && temp <= searchUpperBound) {
+                    searchUpperBound = temp - 1;
                 } else if (!searchUpper) {
                     searchUpper = true;
-                    searchUpperBound = searchVal - 1;
+                    searchUpperBound = temp - 1;
                 }
                 break;
               case SelCond::LE:
-                if (searchUpper && searchVal < searchUpperBound) {
-                    searchUpperBound = searchVal;
+                if (searchUpper && temp < searchUpperBound) {
+                    searchUpperBound = temp;
                 } else if (!searchUpper) {
                     searchUpper = true;
-                    searchUpperBound = searchVal;
+                    searchUpperBound = temp;
                 }
                 break;
 
           }
       }
 
-      if (searchLower && !searchUpper) {
-          // lower bound, find lower bound and go up 
-            if (DEBUG) fprintf(stdout, "lower bound %d\n", searchLowerBound);
-            index.locate(searchLowerBound, cursor);
-            RC ret;
-            while((ret = index.readForward(cursor, key, rid)) == 0) {
-              count++;
-              rf.read(rid, key, value);
-              switch (attr) {
-                  case 1:  // SELECT key
-                      fprintf(stdout, "%d\n", key);
+      
+      if (searchLocate) {
+          // Most limiting search.
+          if (index.locate(searchVal, cursor) != 0) {
+              goto exit_select;
+          }
+
+          count++;
+          index.readForward(cursor, key, rid);
+          if (readValues) {
+            rf.read(rid, key, value);
+          }
+
+          for (unsigned i = 0; i < cond.size(); i++) {
+              switch (cond[i].attr) {
+                  case 1:
+                      diff = key - atoi(cond[i].value);
                       break;
-                  case 2:  // SELECT value
-                      fprintf(stdout, "%s\n", value.c_str());
-                      break;
-                  case 3:  // SELECT *
-                      fprintf(stdout, "%d '%s'\n", key, value.c_str());
+                  case 2:
+                      diff = strcmp(value.c_str(), cond[i].value);
                       break;
               }
-            }
-              if (DEBUG) fprintf(stdout, "ret: %d", ret);
-      } else if (!searchLower && searchUpper) {
-          // upper bound, find lowest item and go to upper bound
-            if (DEBUG) fprintf(stdout, "upper bound %d\n", searchUpperBound);
 
-            index.getFirstElement(cursor);
-            while(index.readForward(cursor, key, rid) == 0) {
-              if (key > searchUpperBound) {
+              // skip the tuple if any condition is not met
+              switch (cond[i].comp) {
+                  case SelCond::EQ:
+                      if (diff != 0) goto exit_select;
+                      break;
+                  case SelCond::NE:
+                      if (diff == 0) goto exit_select;
+                      break;
+                  case SelCond::GT:
+                      if (diff <= 0) goto exit_select;
+                      break;
+                  case SelCond::LT:
+                      if (diff >= 0) goto exit_select
+                          ;
+                      break;
+                  case SelCond::GE:
+                      if (diff < 0) goto exit_select;
+                      break;
+                  case SelCond::LE:
+                      if (diff > 0) goto exit_select;
+                      break;
+              }
+          }
+          switch (attr) {
+              case 1:  // SELECT key
+                  fprintf(stdout, "%d\n", key);
+                  break;
+              case 2:  // SELECT value
+                  fprintf(stdout, "%s\n", value.c_str());
+                  break;
+              case 3:  // SELECT *
+                  fprintf(stdout, "%d '%s'\n", key, value.c_str());
+                  break;
+          }
+      } else if (searchLower || searchUpper) {
+          RC ret;
+          if (searchLower) {
+              index.locate(searchLowerBound, cursor);
+          } else {
+              index.getFirstElement(cursor);
+          }
+          while((ret = index.readForward(cursor, key, rid)) == 0) {
+              if (searchUpper && (key > searchUpperBound)) {
                   break;
               }
               count++;
-              rf.read(rid, key, value);
-              switch (attr) {
-                  case 1:  // SELECT key
-                      fprintf(stdout, "%d\n", key);
-                      break;
-                  case 2:  // SELECT value
-                      fprintf(stdout, "%s\n", value.c_str());
-                      break;
-                  case 3:  // SELECT *
-                      fprintf(stdout, "%d '%s'\n", key, value.c_str());
-                      break;
-              }
-            }
-      } else if (searchLower && searchUpper) {
-            if (DEBUG) fprintf(stdout, "lower bound %d\n", searchLowerBound);
-            if (DEBUG) fprintf(stdout, "upper bound %d\n", searchUpperBound);
-          // find lower bound and go to upper bound
-            index.locate(searchLowerBound, cursor);
-            RC ret;
-            while(index.readForward(cursor, key, rid) == 0) {
-              if (key > searchUpperBound) {
-                  break;
-              }
-              count++;
-              rf.read(rid, key, value);
-              switch (attr) {
-                  case 1:  // SELECT key
-                      fprintf(stdout, "%d\n", key);
-                      break;
-                  case 2:  // SELECT value
-                      fprintf(stdout, "%s\n", value.c_str());
-                      break;
-                  case 3:  // SELECT *
-                      fprintf(stdout, "%d '%s'\n", key, value.c_str());
-                      break;
-              }
-            }
-      }
-
-      //Locate algorithm
-      for (unsigned i = 0; i < cond.size(); i++) {
-          if (cond[i].comp == SelCond::EQ) {
-              searchVal = atoi(cond[i].value);
-              if (index.locate(searchVal, cursor) == 0) {
-                  count++;
-                  index.readForward(cursor, key, rid);
+              if (readValues) {
                   rf.read(rid, key, value);
-                  switch (attr) {
-                      case 1:  // SELECT key
-                          fprintf(stdout, "%d\n", key);
+              }
+              //Condition checking hooray
+              for (unsigned i = 0; i < cond.size(); i++) {
+                  switch (cond[i].attr) {
+                      case 1:
+                          diff = key - atoi(cond[i].value);
                           break;
-                      case 2:  // SELECT value
-                          fprintf(stdout, "%s\n", value.c_str());
+                      case 2:
+                          diff = strcmp(value.c_str(), cond[i].value);
                           break;
-                      case 3:  // SELECT *
-                          fprintf(stdout, "%d '%s'\n", key, value.c_str());
+                  }
+
+                  // skip the tuple if any condition is not met
+                  switch (cond[i].comp) {
+                      case SelCond::EQ:
+                          if (diff != 0) goto exit_select;
+                          break;
+                      case SelCond::NE:
+                          if (diff == 0) goto exit_select;
+                          break;
+                      case SelCond::GT:
+                          if (diff <= 0) goto exit_select;
+                          break;
+                      case SelCond::LT:
+                          if (diff >= 0) goto exit_select
+                              ;
+                          break;
+                      case SelCond::GE:
+                          if (diff < 0) goto exit_select;
+                          break;
+                      case SelCond::LE:
+                          if (diff > 0) goto exit_select;
                           break;
                   }
               }
-          }
-      }
 
-      if (attr == 4) {
-          if (cond.size() == 0) {
-              index.getFirstElement(cursor);
-              while(index.readForward(cursor, key, rid) == 0) {
-                  count++;
+              switch (attr) {
+                  case 1:  // SELECT key
+                      fprintf(stdout, "%d\n", key);
+                      break;
+                  case 2:  // SELECT value
+                      fprintf(stdout, "%s\n", value.c_str());
+                      break;
+                  case 3:  // SELECT *
+                      fprintf(stdout, "%d '%s'\n", key, value.c_str());
+                      break;
               }
+          }
+
+      }
+      
+      if ((attr == 4) && (cond.size() == 0)) {
+          index.getFirstElement(cursor);
+          while(index.readForward(cursor, key, rid) == 0) {
+              count++;
           }
           fprintf(stdout, "%d\n", count);
       }
@@ -241,6 +299,9 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
 
     goto exit_select;
   }
+
+
+  // NAIVE SCAN LETS DO IT 
   // scan the table file from the beginning
   rid.pid = rid.sid = 0;
   count = 0;
