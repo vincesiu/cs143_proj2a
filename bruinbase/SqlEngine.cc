@@ -64,11 +64,6 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
   int temp;
   bool readValues = false; // This is true if requires reading in values from table
 
-  // open the table file
-  if ((rc = rf.open(table + ".tbl", 'r')) < 0) {
-    fprintf(stderr, "Error: table %s does not exist\n", table.c_str());
-    return rc;
-  }
 
 
   // attempt to open the index file, and checks if it's used
@@ -165,6 +160,11 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
 
           }
       }
+  // open the table file
+  if (readValues && ((rc = rf.open(table + ".tbl", 'r')) < 0)) {
+    fprintf(stderr, "Error: table %s does not exist\n", table.c_str());
+    return rc;
+  }
 
       
       if (searchLocate) {
@@ -301,6 +301,11 @@ RC SqlEngine::select(int attr, const string& table, const vector<SelCond>& cond)
     goto exit_select;
   }
 
+  // open the table file
+  if ((rc = rf.open(table + ".tbl", 'r')) < 0) {
+    fprintf(stderr, "Error: table %s does not exist\n", table.c_str());
+    return rc;
+  }
 
   // NAIVE SCAN LETS DO IT 
   // scan the table file from the beginning

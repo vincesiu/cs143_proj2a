@@ -340,6 +340,7 @@ RC BTreeIndex::getFirstElement(IndexCursor& cursor) {
         }
     }
 
+
     cursor.pid = pid;
     cursor.eid = 0;
 
